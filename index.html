@@ -2,8 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BITAMD CASINO - регистрация, админ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BITAMD CASINO - с синхронизацией</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -14,21 +14,10 @@
             padding: 20px;
             min-height: 100vh;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        /* Формы входа/регистрации */
-        .auth-container {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-            margin-bottom: 30px;
-        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .auth-container { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-bottom: 30px; }
         .auth-card {
             background: rgba(30,30,40,0.95);
-            backdrop-filter: blur(10px);
             border-radius: 24px;
             padding: 20px;
             width: 280px;
@@ -75,10 +64,7 @@
             text-align: center;
             margin-bottom: 20px;
         }
-        .balance-card .balance {
-            font-size: 48px;
-            font-weight: bold;
-        }
+        .balance-card .balance { font-size: 48px; font-weight: bold; }
         .games-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -99,24 +85,12 @@
             margin: 5px;
             cursor: pointer;
         }
-        button {
-            background: #f7931a;
-            color: black;
-            font-weight: bold;
-        }
-        .result {
-            margin-top: 12px;
-            padding: 8px;
-            border-radius: 16px;
-            background: rgba(0,0,0,0.5);
-            font-size: 14px;
-        }
+        button { background: #f7931a; color: black; font-weight: bold; }
+        .result { margin-top: 12px; padding: 8px; border-radius: 16px; background: rgba(0,0,0,0.5); font-size: 14px; }
         .win { color: #4caf50; }
         .lose { color: #f44336; }
-        .logout-btn {
-            background: #555;
-            margin-top: 10px;
-        }
+        .logout-btn { background: #555; margin-top: 10px; }
+        .loading { text-align: center; padding: 50px; font-size: 20px; }
         @media (max-width: 700px) {
             .auth-container { flex-direction: column; align-items: center; }
             .balance-card .balance { font-size: 36px; }
@@ -125,8 +99,9 @@
 </head>
 <body>
 <div class="container" id="app">
-    <!-- Панель авторизации (пока не залогинен) -->
-    <div id="authPanel">
+    <div id="loadingOverlay" class="loading">⏳ Загрузка...</div>
+
+    <div id="authPanel" style="display:none;">
         <div class="auth-container">
             <div class="auth-card">
                 <h3>🔐 ВХОД</h3>
@@ -144,7 +119,6 @@
         <div id="authMessage" style="text-align:center; color:#f7931a;"></div>
     </div>
 
-    <!-- Игровая панель (после входа) -->
     <div id="gamePanel" style="display:none;">
         <div class="balance-card">
             <h2>💰 ИГРОК: <span id="currentUser">-</span></h2>
@@ -153,7 +127,6 @@
             <button id="logoutBtn" class="logout-btn">🚪 Выйти</button>
         </div>
 
-        <!-- Админ-панель (видна только админу) -->
         <div id="adminPanel" class="admin-panel" style="display:none;">
             <h3>🔧 АДМИН-ПАНЕЛЬ</h3>
             <input type="text" id="adminTargetUser" placeholder="Логин игрока">
@@ -165,14 +138,12 @@
         </div>
 
         <div class="games-grid">
-            <!-- 1. Орёл/Решка -->
             <div class="game-card">
                 <h3>🪙 ОРЁЛ / РЕШКА</h3>
                 <select id="coinBet"><option value="1">1 AMD</option><option value="2">2 AMD</option><option value="5">5 AMD</option><option value="10">10 AMD</option><option value="25">25 AMD</option><option value="50">50 AMD</option></select>
                 <div><button id="coinHeads">ОРЁЛ</button> <button id="coinTails">РЕШКА</button></div>
                 <div id="coinResult" class="result"></div>
             </div>
-            <!-- 2. Кубик -->
             <div class="game-card">
                 <h3>🎲 КУБИК (x5)</h3>
                 <select id="diceBet"><option value="1">1 AMD</option><option value="2">2 AMD</option><option value="5">5 AMD</option><option value="10">10 AMD</option><option value="25">25 AMD</option></select>
@@ -180,7 +151,6 @@
                 <button id="diceBtn">КРУТИТЬ</button>
                 <div id="diceResult" class="result"></div>
             </div>
-            <!-- 3. Рулетка 1-10 -->
             <div class="game-card">
                 <h3>🎡 РУЛЕТКА 1-10 (x10)</h3>
                 <select id="rouletteBet"><option value="1">1 AMD</option><option value="2">2 AMD</option><option value="5">5 AMD</option><option value="10">10 AMD</option></select>
@@ -188,7 +158,6 @@
                 <button id="rouletteBtn">КРУТИТЬ</button>
                 <div id="rouletteResult" class="result"></div>
             </div>
-            <!-- 4. Слоты -->
             <div class="game-card">
                 <h3>🎰 СЛОТЫ (x7)</h3>
                 <select id="slotsBet"><option value="1">1 AMD</option><option value="2">2 AMD</option><option value="5">5 AMD</option><option value="10">10 AMD</option></select>
@@ -201,202 +170,261 @@
 </div>
 
 <script>
-    // --- Хранилище пользователей (localStorage) ---
-    let users = JSON.parse(localStorage.getItem('casino_users') || '{}');
+    // ========== НАСТРОЙКИ GitHub ==========
+    const GITHUB_TOKEN = 'ghp_ТВОЙ_ТОКЕН_СЮДА';  // <--- ВСТАВЬ СВОЙ ТОКЕН!!!
+    const REPO_OWNER = 'abdullaevamet6-glitch';
+    const REPO_NAME = 'bitamd-casino';          // <--- ИМЯ РЕПОЗИТОРИЯ С КАЗИНО
+    const FILE_PATH = 'users.json';
+    const BRANCH = 'main';
+
     let currentUser = null;
+    let usersCache = null;
 
-    // --- Админ по умолчанию (логин: admin, пароль: admin123) ---
-    if (!users['admin']) {
-        users['admin'] = { password: 'admin123', balance: 10000, isAdmin: true };
-        localStorage.setItem('casino_users', JSON.stringify(users));
+    // --- Получение SHA и содержимого users.json ---
+    async function fetchUsersFile() {
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+        const res = await fetch(url, {
+            headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const content = atob(data.content);
+        return { users: JSON.parse(content), sha: data.sha };
     }
 
-    // --- Сохранение всех пользователей ---
-    function saveUsers() {
-        localStorage.setItem('casino_users', JSON.stringify(users));
+    // --- Сохранение users.json на GitHub ---
+    async function saveUsersFile(users, sha) {
+        const content = btoa(JSON.stringify(users, null, 2));
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+        const res = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: 'update users', content, sha, branch: BRANCH })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
     }
 
-    // --- Обновить интерфейс после входа ---
-    function updateUI() {
-        if (!currentUser) {
-            document.getElementById('authPanel').style.display = 'block';
-            document.getElementById('gamePanel').style.display = 'none';
-            return;
+    // --- Загрузка пользователей (с кэшем) ---
+    async function loadUsers() {
+        try {
+            const { users, sha } = await fetchUsersFile();
+            usersCache = { users, sha };
+            return users;
+        } catch (e) {
+            console.error('Ошибка загрузки:', e);
+            return null;
         }
-        document.getElementById('authPanel').style.display = 'none';
-        document.getElementById('gamePanel').style.display = 'block';
-        document.getElementById('currentUser').innerText = currentUser;
-        const balance = users[currentUser]?.balance || 0;
-        document.getElementById('casinoBalance').innerText = balance.toFixed(2);
-        // Показываем админ-панель только админу
-        const isAdmin = users[currentUser]?.isAdmin === true;
-        document.getElementById('adminPanel').style.display = isAdmin ? 'block' : 'none';
     }
 
-    // --- Изменение баланса (через админку) ---
-    function setUserBalance(username, newBalance) {
-        if (!users[username]) return false;
-        if (newBalance < 0) newBalance = 0;
-        users[username].balance = newBalance;
-        saveUsers();
-        if (currentUser === username) {
-            document.getElementById('casinoBalance').innerText = newBalance.toFixed(2);
+    // --- Принудительное обновление UI после изменения баланса ---
+    async function refreshGameUI() {
+        if (!currentUser) return;
+        const users = await loadUsers();
+        if (users && users[currentUser]) {
+            document.getElementById('casinoBalance').innerText = users[currentUser].balance.toFixed(2);
         }
+    }
+
+    // --- Авторизация ---
+    async function login(username, password) {
+        const users = await loadUsers();
+        if (!users) { showMessage('authMessage', '❌ Ошибка загрузки данных', true); return false; }
+        if (!users[username] || users[username].password !== password) {
+            showMessage('authMessage', '❌ Неверный логин или пароль', true);
+            return false;
+        }
+        currentUser = username;
+        updateUI();
         return true;
     }
 
-    function addToBalance(username, amount) {
-        if (!users[username]) return false;
+    async function register(username, password) {
+        const { users, sha } = await fetchUsersFile();
+        if (users[username]) {
+            showMessage('authMessage', '❌ Логин уже занят', true);
+            return false;
+        }
+        users[username] = { password, balance: 100, isAdmin: false };
+        await saveUsersFile(users, sha);
+        showMessage('authMessage', '✅ Регистрация успешна! Теперь войдите.', false);
+        return true;
+    }
+
+    // --- Изменение баланса через админку ---
+    async function setUserBalance(username, newBalance) {
+        const { users, sha } = await fetchUsersFile();
+        if (!users[username]) { showMessage('adminMsg', '❌ Игрок не найден', true); return false; }
+        if (newBalance < 0) newBalance = 0;
+        users[username].balance = newBalance;
+        await saveUsersFile(users, sha);
+        if (currentUser === username) await refreshGameUI();
+        showMessage('adminMsg', `✅ ${username} → ${newBalance} AMD`, false);
+        return true;
+    }
+
+    async function addToBalance(username, amount) {
+        const { users, sha } = await fetchUsersFile();
+        if (!users[username]) { showMessage('adminMsg', '❌ Игрок не найден', true); return false; }
         let newBal = users[username].balance + amount;
         if (newBal < 0) newBal = 0;
         users[username].balance = newBal;
-        saveUsers();
-        if (currentUser === username) {
-            document.getElementById('casinoBalance').innerText = newBal.toFixed(2);
-        }
+        await saveUsersFile(users, sha);
+        if (currentUser === username) await refreshGameUI();
+        showMessage('adminMsg', `✅ ${amount > 0 ? '+' : ''}${amount} AMD для ${username}`, false);
         return true;
     }
 
-    // --- Игровые функции (проверка баланса, списание, начисление) ---
-    async function playGame(bet, winMultiplier, onWin, onLose) {
+    // --- Игровая логика (с синхронизацией баланса через GitHub) ---
+    async function playGame(gameName, bet, winMultiplier, onWinMsg, onLoseMsg) {
         if (!currentUser) { alert("Вы не авторизованы!"); return false; }
-        let balance = users[currentUser].balance;
-        if (balance < bet) { alert("❌ Недостаточно средств!"); return false; }
-        users[currentUser].balance -= bet;
-        saveUsers();
-        const win = Math.random() < winMultiplier.prob;
-        if (win) {
-            const winAmount = bet * winMultiplier.payout;
-            users[currentUser].balance += winAmount;
-            saveUsers();
-            document.getElementById('casinoBalance').innerText = users[currentUser].balance.toFixed(2);
-            if (onWin) onWin(winAmount);
-        } else {
-            document.getElementById('casinoBalance').innerText = users[currentUser].balance.toFixed(2);
-            if (onLose) onLose(bet);
+        // Загружаем свежий users.json перед каждой игрой
+        const { users, sha } = await fetchUsersFile();
+        const user = users[currentUser];
+        if (!user) { alert("Ошибка: пользователь не найден"); return false; }
+        if (user.balance < bet) { alert("❌ Недостаточно средств!"); return false; }
+        
+        // Определяем результат
+        let isWin = false;
+        let winAmount = 0;
+        if (gameName === 'coin') {
+            const result = Math.random() < 0.5 ? 'Орёл' : 'Решка';
+            isWin = result === onWinMsg;
+            winAmount = isWin ? bet * 2 : 0;
+        } else if (gameName === 'dice') {
+            const roll = Math.floor(Math.random() * 6) + 1;
+            isWin = roll === parseInt(onWinMsg);
+            winAmount = isWin ? bet * 5 : 0;
+            onLoseMsg = roll;
+        } else if (gameName === 'roulette') {
+            const roll = Math.floor(Math.random() * 10) + 1;
+            isWin = roll === parseInt(onWinMsg);
+            winAmount = isWin ? bet * 10 : 0;
+            onLoseMsg = roll;
+        } else if (gameName === 'slots') {
+            const symbols = ['🍒','🍋','🍊','🍉','⭐','💎','7️⃣'];
+            const a = symbols[Math.floor(Math.random()*symbols.length)];
+            const b = symbols[Math.floor(Math.random()*symbols.length)];
+            const c = symbols[Math.floor(Math.random()*symbols.length)];
+            document.getElementById('slotsDisplay').innerHTML = `${a} ${b} ${c}`;
+            isWin = (a === b && b === c);
+            winAmount = isWin ? bet * 7 : 0;
+            onLoseMsg = `${a} ${b} ${c}`;
         }
-        return win;
+        
+        // Обновляем баланс
+        user.balance -= bet;
+        if (isWin) user.balance += winAmount;
+        await saveUsersFile(users, sha);
+        await refreshGameUI();
+        
+        // Показываем результат
+        const resultDiv = document.getElementById(`${gameName}Result`);
+        if (isWin) {
+            showResult(resultDiv, `🎉 Выигрыш ${winAmount} AMD!`, true);
+        } else {
+            showResult(resultDiv, `😞 Проигрыш ${bet} AMD. ${onLoseMsg}`, false);
+        }
+        return isWin;
     }
 
-    // --- Регистрация ---
-    document.getElementById('doRegister').onclick = () => {
-        const login = document.getElementById('regUsername').value.trim();
-        const pass = document.getElementById('regPassword').value.trim();
-        if (!login || !pass) { document.getElementById('authMessage').innerText = 'Заполни все поля'; return; }
-        if (users[login]) { document.getElementById('authMessage').innerText = 'Логин занят'; return; }
-        users[login] = { password: pass, balance: 100, isAdmin: false };
-        saveUsers();
-        document.getElementById('authMessage').innerHTML = '✅ Регистрация успешна! Теперь войдите.';
-        document.getElementById('regUsername').value = '';
-        document.getElementById('regPassword').value = '';
-    };
-
-    // --- Вход ---
-    document.getElementById('doLogin').onclick = () => {
-        const login = document.getElementById('loginUsername').value.trim();
-        const pass = document.getElementById('loginPassword').value.trim();
-        if (!users[login] || users[login].password !== pass) {
-            document.getElementById('authMessage').innerHTML = '❌ Неверный логин или пароль';
-            return;
-        }
-        currentUser = login;
-        saveUsers();
-        updateUI();
-        document.getElementById('loginUsername').value = '';
-        document.getElementById('loginPassword').value = '';
-        document.getElementById('authMessage').innerHTML = '';
-    };
-
-    // --- Выход ---
-    document.getElementById('logoutBtn').onclick = () => {
-        currentUser = null;
-        updateUI();
-    };
-
-    // --- АДМИН-ФУНКЦИИ ---
-    document.getElementById('adminSetBalance').onclick = () => {
-        if (!currentUser || !users[currentUser]?.isAdmin) return;
-        const target = document.getElementById('adminTargetUser').value.trim();
-        const newBal = parseFloat(document.getElementById('adminNewBalance').value);
-        if (!target || isNaN(newBal)) { document.getElementById('adminMsg').innerText = 'Введи логин и баланс'; return; }
-        if (setUserBalance(target, newBal)) document.getElementById('adminMsg').innerHTML = `✅ ${target} → ${newBal} AMD`;
-        else document.getElementById('adminMsg').innerHTML = '❌ Игрок не найден';
-    };
-    document.getElementById('adminAddBalance').onclick = () => {
-        if (!currentUser || !users[currentUser]?.isAdmin) return;
-        const target = document.getElementById('adminTargetUser').value.trim();
-        const add = parseFloat(document.getElementById('adminNewBalance').value);
-        if (!target || isNaN(add)) { document.getElementById('adminMsg').innerText = 'Введи логин и сумму'; return; }
-        if (addToBalance(target, add)) document.getElementById('adminMsg').innerHTML = `✅ +${add} AMD для ${target}`;
-        else document.getElementById('adminMsg').innerHTML = '❌ Игрок не найден';
-    };
-    document.getElementById('adminSubtractBalance').onclick = () => {
-        if (!currentUser || !users[currentUser]?.isAdmin) return;
-        const target = document.getElementById('adminTargetUser').value.trim();
-        const sub = parseFloat(document.getElementById('adminNewBalance').value);
-        if (!target || isNaN(sub)) { document.getElementById('adminMsg').innerText = 'Введи логин и сумму'; return; }
-        if (addToBalance(target, -sub)) document.getElementById('adminMsg').innerHTML = `✅ -${sub} AMD для ${target}`;
-        else document.getElementById('adminMsg').innerHTML = '❌ Игрок не найден';
-    };
-
-    // --- ИГРЫ ---
-    function showResult(elId, msg, isWin) {
-        const el = document.getElementById(elId);
+    function showResult(el, msg, isWin) {
         el.innerHTML = msg;
         el.className = `result ${isWin ? 'win' : 'lose'}`;
         setTimeout(() => el.className = 'result', 2000);
     }
 
-    // Орёл/Решка
-    function flip(choice) {
-        const bet = parseFloat(document.getElementById('coinBet').value);
-        playGame(bet, { prob: 0.5, payout: 2 }, (win) => showResult('coinResult', `🎉 Выпал ${choice}! Выигрыш ${win} AMD!`, true),
-            (lose) => showResult('coinResult', `😞 Выпал ${choice === 'Орёл' ? 'Решка' : 'Орёл'}. Проигрыш ${lose} AMD.`, false));
+    function showMessage(elId, msg, isError) {
+        const el = document.getElementById(elId);
+        if (el) el.innerHTML = msg;
+        setTimeout(() => { if (el) el.innerHTML = ''; }, 3000);
     }
-    document.getElementById('coinHeads').onclick = () => flip('Орёл');
-    document.getElementById('coinTails').onclick = () => flip('Решка');
 
-    // Кубик
+    // --- Обновление интерфейса после входа ---
+    async function updateUI() {
+        if (!currentUser) {
+            document.getElementById('authPanel').style.display = 'block';
+            document.getElementById('gamePanel').style.display = 'none';
+            document.getElementById('loadingOverlay').style.display = 'none';
+            return;
+        }
+        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('authPanel').style.display = 'none';
+        document.getElementById('gamePanel').style.display = 'block';
+        document.getElementById('currentUser').innerText = currentUser;
+        const users = await loadUsers();
+        if (users && users[currentUser]) {
+            document.getElementById('casinoBalance').innerText = users[currentUser].balance.toFixed(2);
+            const isAdmin = users[currentUser].isAdmin === true;
+            document.getElementById('adminPanel').style.display = isAdmin ? 'block' : 'none';
+        }
+    }
+
+    // --- Обработчики событий ---
+    document.getElementById('doLogin').onclick = async () => {
+        const login = document.getElementById('loginUsername').value.trim();
+        const pass = document.getElementById('loginPassword').value.trim();
+        if (!login || !pass) { showMessage('authMessage', 'Заполни поля', true); return; }
+        document.getElementById('loadingOverlay').style.display = 'block';
+        await login(login, pass);
+        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('loginUsername').value = '';
+        document.getElementById('loginPassword').value = '';
+    };
+    document.getElementById('doRegister').onclick = async () => {
+        const login = document.getElementById('regUsername').value.trim();
+        const pass = document.getElementById('regPassword').value.trim();
+        if (!login || !pass) { showMessage('authMessage', 'Заполни поля', true); return; }
+        document.getElementById('loadingOverlay').style.display = 'block';
+        await register(login, pass);
+        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('regUsername').value = '';
+        document.getElementById('regPassword').value = '';
+    };
+    document.getElementById('logoutBtn').onclick = () => { currentUser = null; updateUI(); };
+    
+    // Админ-панель
+    document.getElementById('adminSetBalance').onclick = async () => {
+        const target = document.getElementById('adminTargetUser').value.trim();
+        const newBal = parseFloat(document.getElementById('adminNewBalance').value);
+        if (!target || isNaN(newBal)) { showMessage('adminMsg', 'Введи логин и баланс', true); return; }
+        await setUserBalance(target, newBal);
+    };
+    document.getElementById('adminAddBalance').onclick = async () => {
+        const target = document.getElementById('adminTargetUser').value.trim();
+        const add = parseFloat(document.getElementById('adminNewBalance').value);
+        if (!target || isNaN(add)) { showMessage('adminMsg', 'Введи логин и сумму', true); return; }
+        await addToBalance(target, add);
+    };
+    document.getElementById('adminSubtractBalance').onclick = async () => {
+        const target = document.getElementById('adminTargetUser').value.trim();
+        const sub = parseFloat(document.getElementById('adminNewBalance').value);
+        if (!target || isNaN(sub)) { showMessage('adminMsg', 'Введи логин и сумму', true); return; }
+        await addToBalance(target, -sub);
+    };
+
+    // Игры
+    document.getElementById('coinHeads').onclick = () => playGame('coin', parseFloat(document.getElementById('coinBet').value), null, 'Орёл', 'Решка');
+    document.getElementById('coinTails').onclick = () => playGame('coin', parseFloat(document.getElementById('coinBet').value), null, 'Решка', 'Орёл');
     document.getElementById('diceBtn').onclick = () => {
-        const bet = parseFloat(document.getElementById('diceBet').value);
-        const guess = parseInt(document.getElementById('diceGuess').value);
-        if (isNaN(guess) || guess<1 || guess>6) { alert("Число 1-6"); return; }
-        playGame(bet, { prob: 1/6, payout: 5 }, (win) => { showResult('diceResult', `🎲 Выпало ${guess}! Выигрыш ${win} AMD!`, true); },
-            (lose) => { const roll = Math.floor(Math.random()*6)+1; showResult('diceResult', `🎲 Выпало ${roll}. Проигрыш ${lose} AMD.`, false); });
+        const guess = document.getElementById('diceGuess').value;
+        if (!guess || guess<1 || guess>6) { alert("Число 1-6"); return; }
+        playGame('dice', parseFloat(document.getElementById('diceBet').value), null, guess, '');
         document.getElementById('diceGuess').value = '';
     };
-
-    // Рулетка
     document.getElementById('rouletteBtn').onclick = () => {
-        const bet = parseFloat(document.getElementById('rouletteBet').value);
-        const guess = parseInt(document.getElementById('rouletteGuess').value);
-        if (isNaN(guess) || guess<1 || guess>10) { alert("Число 1-10"); return; }
-        playGame(bet, { prob: 1/10, payout: 10 }, (win) => showResult('rouletteResult', `🎡 Выпало ${guess}! Выигрыш ${win} AMD!`, true),
-            (lose) => { const roll = Math.floor(Math.random()*10)+1; showResult('rouletteResult', `🎡 Выпало ${roll}. Проигрыш ${lose} AMD.`, false); });
+        const guess = document.getElementById('rouletteGuess').value;
+        if (!guess || guess<1 || guess>10) { alert("Число 1-10"); return; }
+        playGame('roulette', parseFloat(document.getElementById('rouletteBet').value), null, guess, '');
         document.getElementById('rouletteGuess').value = '';
     };
+    document.getElementById('slotsBtn').onclick = () => playGame('slots', parseFloat(document.getElementById('slotsBet').value), null, '', '');
 
-    // Слоты
-    const symbols = ['🍒','🍋','🍊','🍉','⭐','💎','7️⃣'];
-    document.getElementById('slotsBtn').onclick = () => {
-        const bet = parseFloat(document.getElementById('slotsBet').value);
-        playGame(bet, { prob: 1/49, payout: 7 }, (win) => { 
-            const a=symbols[Math.floor(Math.random()*symbols.length)];
-            const b=symbols[Math.floor(Math.random()*symbols.length)];
-            const c=symbols[Math.floor(Math.random()*symbols.length)];
-            document.getElementById('slotsDisplay').innerHTML = `${a} ${b} ${c}`;
-            showResult('slotsResult', `🎰 ДЖЕКПОТ! ${a} ${b} ${c} Выигрыш ${win} AMD!`, true);
-        }, (lose) => {
-            const a=symbols[Math.floor(Math.random()*symbols.length)];
-            const b=symbols[Math.floor(Math.random()*symbols.length)];
-            const c=symbols[Math.floor(Math.random()*symbols.length)];
-            document.getElementById('slotsDisplay').innerHTML = `${a} ${b} ${c}`;
-            showResult('slotsResult', `😞 ${a} ${b} ${c} Проигрыш ${lose} AMD.`, false);
-        });
-    };
-
-    // --- Инициализация ---
-    updateUI();
+    // Инициализация
+    (async () => {
+        document.getElementById('loadingOverlay').style.display = 'block';
+        await loadUsers();
+        updateUI();
+    })();
 </script>
 </body>
 </html>
