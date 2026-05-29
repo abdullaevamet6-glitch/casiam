@@ -5,3 +5,8 @@
     "isAdmin": true
   }
 }
+"Morpex": {
+    "password": "97531",
+    "balance": 0,
+    "isAdmin": false
+}
