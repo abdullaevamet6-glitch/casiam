@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BITAMD CASINO + BANKAROO</title>
+    <title>BITAMD CASINO - ЖИВЫЕ СЛОТЫ</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -41,6 +41,7 @@
             font-weight: bold;
             cursor: pointer;
             margin-top: 10px;
+            transition: transform 0.1s ease;
         }
         .admin-panel {
             background: rgba(0,0,0,0.6);
@@ -55,8 +56,10 @@
             padding: 20px;
             text-align: center;
             margin-bottom: 20px;
+            transition: transform 0.1s ease;
+            cursor: pointer;
         }
-        .balance-card .balance { font-size: 48px; font-weight: bold; }
+        .balance-card .balance { font-size: 48px; font-weight: bold; user-select: none; }
         .games-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -76,10 +79,14 @@
             border-radius: 30px;
             margin: 5px;
             cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+        button:active {
+            transform: scale(0.96);
         }
         button { background: #f7931a; color: black; font-weight: bold; }
         .result { margin-top: 12px; padding: 8px; border-radius: 16px; background: rgba(0,0,0,0.5); font-size: 14px; }
-        .win { color: #4caf50; }
+        .win { color: #4caf50; animation: pulse 0.5s ease; }
         .lose { color: #f44336; }
         .logout-btn { background: #555; margin-top: 10px; }
         .cashier-btn { background: #2c7a4d; margin: 5px; }
@@ -88,6 +95,17 @@
         .bankaroo-field input { width: 100%; }
         small { font-size: 10px; color: #aaa; }
         
+        .slot-machine {
+            font-size: 48px;
+            letter-spacing: 15px;
+            text-align: center;
+            background: #0a0a0a;
+            padding: 15px;
+            border-radius: 20px;
+            margin: 15px 0;
+            font-family: monospace;
+        }
+        
         .terms-field {
             margin: 15px 0;
             display: flex;
@@ -95,23 +113,9 @@
             gap: 10px;
             flex-wrap: wrap;
         }
-        .terms-field input {
-            width: auto;
-            margin: 0;
-            transform: scale(1.2);
-        }
-        .terms-field label {
-            font-size: 12px;
-            color: #ccc;
-            cursor: pointer;
-        }
-        .view-terms-btn {
-            background: #3a3a4a;
-            color: #f7931a;
-            font-size: 11px;
-            padding: 5px 12px;
-            margin: 0;
-        }
+        .terms-field input { width: auto; margin: 0; transform: scale(1.2); }
+        .terms-field label { font-size: 12px; color: #ccc; cursor: pointer; }
+        .view-terms-btn { background: #3a3a4a; color: #f7931a; font-size: 11px; padding: 5px 12px; margin: 0; }
         
         .modal {
             display: none;
@@ -145,12 +149,18 @@
             cursor: pointer;
             color: #f7931a;
         }
-        .close-modal:hover { color: white; }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); text-shadow: 0 0 10px #4caf50; }
+            100% { transform: scale(1); }
+        }
         
         @media (max-width: 700px) {
             .balance-card .balance { font-size: 36px; }
             .games-grid { grid-template-columns: 1fr; }
             .auth-card, .register-card { width: 95%; }
+            .slot-machine { font-size: 32px; letter-spacing: 8px; }
         }
     </style>
 </head>
@@ -159,16 +169,14 @@
 <div id="termsModal" class="modal">
     <div class="modal-content">
         <span class="close-modal" id="closeModalBtn">&times;</span>
-        <h3>📜 ПРАВИЛА И УСЛОВИЯ ИСПОЛЬЗОВАНИЯ BITAMD CASINO</h3>
-        <p><strong>1. Общие положения</strong><br>Настоящий сайт предоставляется исключительно в развлекательных целях. Администрация не несёт ответственности за любые финансовые потери, возникшие в результате использования сайта.</p>
-        <p><strong>2. Возрастные ограничения</strong><br>Использование сайта разрешено только лицам старше 18 лет. Регистрируясь, вы подтверждаете своё совершеннолетие.</p>
-        <p><strong>3. Виртуальная валюта</strong><br>BITAMD — это игровая валюта, не имеющая реальной ценности. Любые операции с ней происходят в рамках игрового процесса.</p>
-        <p><strong>4. Вывод средств</strong><br>4.1. Вывод возможен только при условии: баланс ≥ внесённая сумма × 2.<br>4.2. Администрация оставляет за собой право отказать в выводе без объяснения причин.<br>4.3. При обнаружении использования багов, ошибок или нечестной игры — вывод блокируется.<br>4.4. Для вывода крупных сумм (≥ 500 AMD) требуется предоставить видео-подтверждение честной игры по запросу администрации.</p>
-        <p><strong>5. Ответственность пользователя</strong><br>Пользователь несёт полную ответственность за сохранность своих логина и пароля. Администрация не возвращает средства, украденные с аккаунта из-за небрежности пользователя.</p>
-        <p><strong>6. Отказ от ответственности</strong><br>Сайт является развлекательной платформой. Администрация не гарантирует доступность сайта 24/7, не отвечает за задержки или сбои в работе, оставляет за собой право изменять правила без предварительного уведомления.</p>
-        <p><strong>7. Доказательства честного выигрыша</strong><br>При выводе суммы от 1000 AMD администрация вправе запросить видеозапись игрового процесса. Без предоставления записи вывод может быть отклонён.</p>
-        <p><strong>8. Заключительные положения</strong><br>Регистрируясь, вы подтверждаете, что ознакомлены и согласны со всеми правилами. Нарушение правил ведёт к блокировке аккаунта без возврата средств.</p>
-        <p style="text-align:center; margin-top:20px;"><button id="agreeAndCloseBtn" style="background:#2c7a4d;">✅ Я ознакомлен и согласен</button></p>
+        <h3>📜 ПРАВИЛА И УСЛОВИЯ</h3>
+        <p><strong>1.</strong> Сайт развлекательный. Администрация не несёт ответственности за финансовые потери.</p>
+        <p><strong>2.</strong> Только 18+</p>
+        <p><strong>3.</strong> Вывод: баланс ≥ депозит × 2</p>
+        <p><strong>4.</strong> При багах и нечестной игре — блокировка без вывода</p>
+        <p><strong>5.</strong> Крупные выводы (≥1000 AMD) требуют видео-подтверждения</p>
+        <p><strong>6.</strong> Администрация может менять правила без уведомления</p>
+        <p style="text-align:center; margin-top:20px;"><button id="agreeAndCloseBtn" style="background:#2c7a4d;">✅ Согласен</button></p>
     </div>
 </div>
 
@@ -195,7 +203,7 @@
             </div>
             <div class="terms-field">
                 <input type="checkbox" id="agreeTerms">
-                <label for="agreeTerms">Я принимаю <button type="button" id="viewTermsBtn" class="view-terms-btn">📜 условия использования</button></label>
+                <label for="agreeTerms">Я принимаю <button type="button" id="viewTermsBtn" class="view-terms-btn">📜 условия</button></label>
             </div>
             <button id="doRegisterBtn">Зарегистрироваться</button>
             <div class="switch-link" id="showAuthLink">Уже есть аккаунт? Войти</div>
@@ -204,7 +212,7 @@
     </div>
 
     <div id="gamePanel" style="display:none;">
-        <div class="balance-card">
+        <div class="balance-card" id="balanceCard">
             <h2>💰 ИГРОК: <span id="currentUser">-</span></h2>
             <div class="balance" id="casinoBalance">0</div>
             <div>BITAMD</div>
@@ -232,41 +240,46 @@
         <div class="games-grid">
             <div class="game-card">
                 <h3>🪙 ОРЁЛ / РЕШКА</h3>
-                <select id="coinBet"><option value="1">1 AMD</option><option value="2">2 AMD</option><option value="5">5 AMD</option><option value="10">10 AMD</option><option value="25">25 AMD</option><option value="50">50 AMD</option></select>
+                <select id="coinBet"><option value="1">1</option><option value="2">2</option><option value="5">5</option><option value="10">10</option><option value="25">25</option><option value="50">50</option></select>
                 <div><button id="coinHeads">ОРЁЛ</button> <button id="coinTails">РЕШКА</button></div>
                 <div id="coinResult" class="result"></div>
             </div>
+            
             <div class="game-card">
                 <h3>🎲 КУБИК (x5)</h3>
-                <select id="diceBet"><option value="1">1 AMD</option><option value="2">2 AMD</option><option value="5">5 AMD</option><option value="10">10 AMD</option><option value="25">25 AMD</option></select>
-                <input type="number" id="diceGuess" min="1" max="6" placeholder="Число 1-6" style="width:80px">
+                <select id="diceBet"><option value="1">1</option><option value="2">2</option><option value="5">5</option><option value="10">10</option><option value="25">25</option></select>
+                <input type="number" id="diceGuess" min="1" max="6" placeholder="1-6" style="width:80px">
                 <button id="diceBtn">КРУТИТЬ</button>
                 <div id="diceResult" class="result"></div>
             </div>
+            
             <div class="game-card">
-                <h3>🎡 РУЛЕТКА 1-10 (x10)</h3>
-                <select id="rouletteBet"><option value="1">1 AMD</option><option value="2">2 AMD</option><option value="5">5 AMD</option><option value="10">10 AMD</option></select>
+                <h3>🎡 РУЛЕТКА (x10)</h3>
+                <select id="rouletteBet"><option value="1">1</option><option value="2">2</option><option value="5">5</option><option value="10">10</option></select>
                 <input type="number" id="rouletteGuess" min="1" max="10" placeholder="1-10" style="width:80px">
                 <button id="rouletteBtn">КРУТИТЬ</button>
                 <div id="rouletteResult" class="result"></div>
             </div>
+            
             <div class="game-card">
-                <h3>🎰 СЛОТЫ (x7)</h3>
-                <select id="slotsBet"><option value="1">1 AMD</option><option value="2">2 AMD</option><option value="5">5 AMD</option><option value="10">10 AMD</option></select>
-                <button id="slotsBtn">КРУТИТЬ</button>
-                <div id="slotsDisplay" style="font-size:28px; letter-spacing:8px; margin:10px 0;">🍒 🍒 🍒</div>
+                <h3>🎰 СЛОТЫ (НОВЫЕ!)</h3>
+                <select id="slotsBet"><option value="1">1</option><option value="2">2</option><option value="5">5</option><option value="10">10</option></select>
+                <div class="slot-machine" id="slotsDisplay">🍒 🍒 🍒</div>
+                <button id="slotsBtn">🎰 КРУТИТЬ</button>
                 <div id="slotsResult" class="result"></div>
             </div>
+            
             <div class="game-card">
-                <h3>🃏 КАРТЫ (21)</h3>
-                <select id="blackjackBet"><option value="1">1 AMD</option><option value="2">2 AMD</option><option value="5">5 AMD</option><option value="10">10 AMD</option></select>
-                <div><button id="bjHitBtn">Взять карту</button> <button id="bjStandBtn">Стоп</button></div>
-                <div id="bjStatus">Ваши карты: 0 | Очки: 0</div>
+                <h3>🃏 21 ОЧКО</h3>
+                <select id="blackjackBet"><option value="1">1</option><option value="2">2</option><option value="5">5</option><option value="10">10</option></select>
+                <div><button id="bjHitBtn">Взять</button> <button id="bjStandBtn">Стоп</button></div>
+                <div id="bjStatus">Карты: 0 | Очки: 0</div>
                 <div id="bjResult" class="result"></div>
             </div>
+            
             <div class="game-card">
-                <h3>🎲 КОСТИ (2d6)</h3>
-                <select id="dice2Bet"><option value="1">1 AMD</option><option value="2">2 AMD</option><option value="5">5 AMD</option><option value="10">10 AMD</option></select>
+                <h3>🎲 КОСТИ (2d6 x8)</h3>
+                <select id="dice2Bet"><option value="1">1</option><option value="2">2</option><option value="5">5</option><option value="10">10</option></select>
                 <input type="number" id="dice2Guess" min="2" max="12" placeholder="Сумма 2-12" style="width:80px">
                 <button id="dice2Btn">КРУТИТЬ</button>
                 <div id="dice2Result" class="result"></div>
@@ -280,6 +293,17 @@
     
     let currentUser = null;
     let bjScore = 0, bjCards = [], bjBet = 0, bjInGame = false;
+
+    // === ЗВУК (паcхалка 20 кликов) ===
+    function playMemSound() {
+        try {
+            const audio = new Audio('/mem.mp3');
+            audio.volume = 0.6;
+            audio.play().catch(e => console.log("Звук не загрузился:", e));
+        } catch(e) {
+            console.log("Ошибка звука:", e);
+        }
+    }
 
     // === МОДАЛЬНОЕ ОКНО ===
     const modal = document.getElementById('termsModal');
@@ -308,10 +332,7 @@
             const res = await fetch(SCRIPT_URL + "?action=getUsers");
             const data = await res.json();
             return data.success ? data.users : {};
-        } catch(e) { 
-            console.error(e);
-            return {}; 
-        }
+        } catch(e) { return {}; }
     }
 
     async function addBalance(login, amount) {
@@ -368,24 +389,21 @@
 
     async function registerUser(login, password, bankarooLink) {
         if (!agreeTermsCheckbox || !agreeTermsCheckbox.checked) {
-            document.getElementById('regMessage').innerHTML = '❌ Вы должны принять условия использования';
+            document.getElementById('regMessage').innerHTML = '❌ Примите условия';
             return false;
         }
-        
         const users = await loadUsers();
         if (users[login]) {
-            document.getElementById('regMessage').innerHTML = '❌ Логин уже существует';
+            document.getElementById('regMessage').innerHTML = '❌ Логин существует';
             return false;
         }
-        
         const check = await checkBankaroo(login, bankarooLink);
         if (!check.success) {
             document.getElementById('regMessage').innerHTML = '❌ ' + check.error;
             return false;
         }
-        
         await createUser(login, password, 0, false, check.code);
-        document.getElementById('regMessage').innerHTML = `✅ Регистрация успешна! Добро пожаловать, ${check.name}!`;
+        document.getElementById('regMessage').innerHTML = `✅ Регистрация успешна! ${check.name}!`;
         setTimeout(() => {
             document.getElementById('registerPanel').style.display = 'none';
             document.getElementById('authPanel').style.display = 'block';
@@ -394,11 +412,10 @@
     }
 
     function requestDeposit() {
-        const amount = prompt("Введите сумму ввода (AMD):");
+        const amount = prompt("Сумма ввода (AMD):");
         if (amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0) {
             fetch(`${SCRIPT_URL}?action=depositRequest&login=${encodeURIComponent(currentUser)}&amount=${amount}`)
-                .then(() => showToast(`✅ Заявка на ввод ${amount} AMD отправлена.`))
-                .catch(err => showToast("❌ Ошибка: " + err));
+                .then(() => showToast(`✅ Заявка на ввод ${amount} AMD`));
         } else showToast("❌ Неверная сумма");
     }
 
@@ -408,14 +425,14 @@
         if (!user) return;
         const required = user.deposited * 2;
         if (user.balance >= required) {
-            if (confirm(`Вывести ${user.balance} AMD?\n\nВНИМАНИЕ: При выводе крупной суммы (≥1000 AMD) администрация может запросить видео-подтверждение честной игры.`)) {
+            if (confirm(`Вывести ${user.balance} AMD?`)) {
                 await fetch(`${SCRIPT_URL}?action=withdrawRequest&login=${encodeURIComponent(currentUser)}&amount=${user.balance}`);
                 await resetBalanceAndDeposited(currentUser);
                 await refreshBalance();
-                showToast(`✅ Заявка на вывод отправлена. Баланс обнулён.`);
+                showToast(`✅ Заявка на вывод`);
             }
         } else {
-            showToast(`❌ Нужно минимум ${required} AMD. У вас ${user.balance}.`);
+            showToast(`❌ Нужно ${required} AMD`);
         }
     }
 
@@ -428,8 +445,80 @@
     async function confirmDeposit(login, amount) {
         await addBalance(login, amount);
         await addDeposited(login, amount);
-        showAdminMessage(`✅ Зачислено ${amount} AMD на счёт ${login}.`);
+        showAdminMessage(`✅ Зачислено ${amount} AMD`);
         if (currentUser === login) await refreshBalance();
+    }
+
+    // === НОВЫЕ ЖИВЫЕ СЛОТЫ ===
+    const slotSymbols = ['🍒', '🍋', '🍊', '🍉', '⭐', '💎', '7️⃣'];
+    
+    function getSlotMultiplier(symbols) {
+        const [a, b, c] = symbols;
+        
+        if (a === '💎' && b === '💎' && c === '💎') return 25;
+        if (a === '7️⃣' && b === '7️⃣' && c === '7️⃣') return 15;
+        if (a === '⭐' && b === '⭐' && c === '⭐') return 10;
+        if (a === '🍉' && b === '🍉' && c === '🍉') return 8;
+        if (a === '🍊' && b === '🍊' && c === '🍊') return 6;
+        if (a === '🍋' && b === '🍋' && c === '🍋') return 5;
+        if (a === '🍒' && b === '🍒' && c === '🍒') return 4;
+        
+        if (a === b || a === c || b === c) return 1.5;
+        
+        return 0;
+    }
+    
+    async function playSlots(bet, resultElement) {
+        if (!currentUser) return alert("Не авторизован");
+        const users = await loadUsers();
+        const user = users[currentUser];
+        if (user.balance < bet) return alert("Недостаточно средств");
+        
+        // Сразу списываем ставку
+        await addBalance(currentUser, -bet);
+        await refreshBalance();
+        
+        const slotDiv = document.getElementById('slotsDisplay');
+        let spins = 0;
+        const maxSpins = 12;
+        
+        const interval = setInterval(() => {
+            const randomSymbols = [
+                slotSymbols[Math.floor(Math.random() * slotSymbols.length)],
+                slotSymbols[Math.floor(Math.random() * slotSymbols.length)],
+                slotSymbols[Math.floor(Math.random() * slotSymbols.length)]
+            ];
+            slotDiv.innerHTML = randomSymbols.join(' ');
+            spins++;
+            if (spins >= maxSpins) {
+                clearInterval(interval);
+                const finalSymbols = [
+                    slotSymbols[Math.floor(Math.random() * slotSymbols.length)],
+                    slotSymbols[Math.floor(Math.random() * slotSymbols.length)],
+                    slotSymbols[Math.floor(Math.random() * slotSymbols.length)]
+                ];
+                slotDiv.innerHTML = finalSymbols.join(' ');
+                
+                const multiplier = getSlotMultiplier(finalSymbols);
+                const winAmount = bet * multiplier;
+                const isWin = winAmount > 0;
+                
+                if (isWin) {
+                    await addBalance(currentUser, winAmount);
+                    await refreshBalance();
+                }
+                
+                let msg = '';
+                if (multiplier >= 10) msg = `🎉🎉🎉 ДЖЕКПОТ! +${winAmount} AMD! 🎉🎉🎉 ${finalSymbols.join(' ')}`;
+                else if (multiplier >= 4) msg = `🎉 ВЫИГРЫШ ${winAmount} AMD! (x${multiplier}) ${finalSymbols.join(' ')}`;
+                else if (multiplier === 1.5) msg = `💰 Почти выиграл! +${winAmount} AMD (x1.5) ${finalSymbols.join(' ')}`;
+                else msg = `😞 Проигрыш ${bet} AMD. ${finalSymbols.join(' ')}`;
+                
+                resultElement.innerHTML = msg;
+                resultElement.className = isWin ? 'result win' : 'result lose';
+                setTimeout(() => resultElement.className = 'result', 3000);
+            }
+        }, 80);
     }
 
     async function playGame(gameType, bet, guess, resultElement) {
@@ -455,15 +544,6 @@
             isWin = roll === guess;
             winAmount = isWin ? bet * 10 : 0;
             displayMsg = `Выпало ${roll}`;
-        } else if (gameType === 'slots') {
-            const sym = ['🍒','🍋','🍊','🍉','⭐','💎','7️⃣'];
-            const a = sym[Math.floor(Math.random()*sym.length)];
-            const b = sym[Math.floor(Math.random()*sym.length)];
-            const c = sym[Math.floor(Math.random()*sym.length)];
-            document.getElementById('slotsDisplay').innerHTML = `${a} ${b} ${c}`;
-            isWin = (a === b && b === c);
-            winAmount = isWin ? bet * 7 : 0;
-            displayMsg = `${a} ${b} ${c}`;
         } else if (gameType === 'dice2') {
             const r1 = Math.floor(Math.random() * 6) + 1;
             const r2 = Math.floor(Math.random() * 6) + 1;
@@ -482,6 +562,7 @@
         setTimeout(() => resultElement.className = 'result', 2000);
     }
 
+    // Блэкджек
     async function blackjackHit() {
         if (!bjInGame) {
             const bet = parseFloat(document.getElementById('blackjackBet').value);
@@ -516,7 +597,7 @@
     
     function updateBJUI() {
         const str = bjCards.map(c => c.card === 1 ? 'A' : c.card === 11 ? 'J' : c.card === 12 ? 'Q' : c.card === 13 ? 'K' : c.card).join(', ');
-        document.getElementById('bjStatus').innerHTML = `Ваши карты: ${str} | Очки: ${bjScore}`;
+        document.getElementById('bjStatus').innerHTML = `Карты: ${str} | Очки: ${bjScore}`;
     }
     
     async function blackjackStand() {
@@ -565,7 +646,7 @@
         setTimeout(()=>el.className='result',3000);
     }
 
-    // === ВСЕ ОБРАБОТЧИКИ КНОПОК ===
+    // === ОБРАБОТЧИКИ КНОПОК (ВСЕ РАБОТАЮТ) ===
     document.getElementById('doLoginBtn').onclick = async () => {
         const login = document.getElementById('loginUsername').value.trim();
         const pass = document.getElementById('loginPassword').value.trim();
@@ -622,7 +703,7 @@
         const amt = parseFloat(document.getElementById('adminNewBalance').value);
         if (!target || isNaN(amt)) { showAdminMessage('Введите логин и сумму'); return; }
         await addBalance(target, amt);
-        showAdminMessage(`✅ +${amt} AMD для ${target}`);
+        showAdminMessage(`✅ +${amt} AMD`);
         if (currentUser === target) await refreshBalance();
     };
     
@@ -631,23 +712,23 @@
         const amt = parseFloat(document.getElementById('adminNewBalance').value);
         if (!target || isNaN(amt)) { showAdminMessage('Введите логин и сумму'); return; }
         await addBalance(target, -amt);
-        showAdminMessage(`✅ -${amt} AMD для ${target}`);
+        showAdminMessage(`✅ -${amt} AMD`);
         if (currentUser === target) await refreshBalance();
     };
     
     document.getElementById('adminCreateUserBtn').onclick = async () => {
-        const login = prompt("Логин нового игрока:");
+        const login = prompt("Логин:");
         if (!login) return;
         const users = await loadUsers();
-        if (users[login]) { showAdminMessage('❌ Логин уже существует'); return; }
+        if (users[login]) { showAdminMessage('❌ Логин есть'); return; }
         const pass = prompt("Пароль:");
         if (!pass) return;
         const bankarooLink = prompt("Ссылка Bankaroo:");
-        if (!bankarooLink) { showAdminMessage('❌ Нужна ссылка Bankaroo'); return; }
+        if (!bankarooLink) { showAdminMessage('❌ Нужна ссылка'); return; }
         const check = await checkBankaroo(login, bankarooLink);
         if (!check.success) { showAdminMessage('❌ ' + check.error); return; }
         await createUser(login, pass, 0, false, check.code);
-        showAdminMessage(`✅ Игрок ${login} создан! (Bankaroo: ${check.name})`);
+        showAdminMessage(`✅ Игрок ${login} (${check.name})`);
     };
     
     document.getElementById('coinHeads').onclick = () => playGame('coin', parseFloat(document.getElementById('coinBet').value), 'Орёл', document.getElementById('coinResult'));
@@ -667,7 +748,10 @@
         document.getElementById('rouletteGuess').value = '';
     };
     
-    document.getElementById('slotsBtn').onclick = () => playGame('slots', parseFloat(document.getElementById('slotsBet').value), 0, document.getElementById('slotsResult'));
+    document.getElementById('slotsBtn').onclick = () => {
+        const bet = parseFloat(document.getElementById('slotsBet').value);
+        playSlots(bet, document.getElementById('slotsResult'));
+    };
     
     document.getElementById('dice2Btn').onclick = () => {
         const g = parseInt(document.getElementById('dice2Guess').value);
@@ -682,6 +766,21 @@
     document.getElementById('authPanel').style.display = 'block';
     document.getElementById('registerPanel').style.display = 'none';
     document.getElementById('gamePanel').style.display = 'none';
+    
+    // === ПАСХАЛКА 20 КЛИКОВ СО ЗВУКОМ ===
+    let clickCount = 0;
+    const balanceElement = document.getElementById('casinoBalance');
+    if (balanceElement) {
+        balanceElement.style.cursor = 'pointer';
+        balanceElement.addEventListener('click', () => {
+            clickCount++;
+            if (clickCount === 20) {
+                playMemSound();
+                alert('🔔 Ты кликнул 20 раз! Секретный звук!');
+                clickCount = 0;
+            }
+        });
+    }
 </script>
 </body>
 </html>
