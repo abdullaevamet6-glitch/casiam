@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BITAMD CASINO - админ создаёт игроков</title>
+    <title>BITAMD CASINO</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -98,7 +98,6 @@
 </head>
 <body>
 <div class="container" id="app">
-    <!-- Панель входа -->
     <div id="authPanel">
         <div class="auth-card">
             <h3>🔐 ВХОД</h3>
@@ -109,7 +108,6 @@
         <div id="authMessage" style="text-align:center; color:#f7931a;"></div>
     </div>
 
-    <!-- Игровая панель (после входа) -->
     <div id="gamePanel" style="display:none;">
         <div class="balance-card">
             <h2>💰 ИГРОК: <span id="currentUser">-</span></h2>
@@ -118,7 +116,6 @@
             <button id="logoutBtn" class="logout-btn">🚪 Выйти</button>
         </div>
 
-        <!-- Админ-панель (видна только админу) -->
         <div id="adminPanel" class="admin-panel" style="display:none;">
             <h3>🔧 АДМИН-ПАНЕЛЬ</h3>
             <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
@@ -165,62 +162,108 @@
 </div>
 
 <script>
-    // ===== ЛОКАЛЬНОЕ ХРАНЕНИЕ =====
-    let users = JSON.parse(localStorage.getItem('casino_users') || '{}');
+    // ===== НАСТРОЙКИ (репозиторий casiamd) =====
+    const GITHUB_TOKEN = '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';
+    const REPO_OWNER = 'abdullaevamet6-glitch';
+    const REPO_NAME = 'casiamd';
+    const FILE_PATH = 'users.json';
+    const BRANCH = 'main';
+
     let currentUser = null;
 
-    // Создаём админа, если его нет
-    if (!users['admin']) {
-        users['admin'] = { password: 'admin123', balance: 10000, isAdmin: true };
-        localStorage.setItem('casino_users', JSON.stringify(users));
+    async function fetchUsersFile() {
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+        const res = await fetch(url, {
+            headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const content = atob(data.content);
+        return { users: JSON.parse(content), sha: data.sha };
     }
 
-    function saveUsers() {
-        localStorage.setItem('casino_users', JSON.stringify(users));
+    async function saveUsersFile(users, sha) {
+        const content = btoa(JSON.stringify(users, null, 2));
+        const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+        const res = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: 'update users', content, sha, branch: BRANCH })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
     }
 
-    function updateUI() {
+    async function loadUsers() {
+        try {
+            const { users, sha } = await fetchUsersFile();
+            return { users, sha };
+        } catch (e) {
+            console.error('Ошибка загрузки:', e);
+            return null;
+        }
+    }
+
+    async function login(username, password) {
+        const data = await loadUsers();
+        if (!data) { showMessage('authMessage', '❌ Ошибка загрузки данных', true); return false; }
+        const user = data.users[username];
+        if (!user || user.password !== password) {
+            showMessage('authMessage', '❌ Неверный логин или пароль', true);
+            return false;
+        }
+        currentUser = username;
+        updateUI();
+        return true;
+    }
+
+    async function updateUI() {
         if (!currentUser) {
             document.getElementById('authPanel').style.display = 'block';
             document.getElementById('gamePanel').style.display = 'none';
             return;
         }
+        const data = await loadUsers();
+        if (!data) return;
+        const user = data.users[currentUser];
+        if (!user) return;
         document.getElementById('authPanel').style.display = 'none';
         document.getElementById('gamePanel').style.display = 'block';
         document.getElementById('currentUser').innerText = currentUser;
-        const balance = users[currentUser]?.balance || 0;
-        document.getElementById('casinoBalance').innerText = balance.toFixed(2);
-        const isAdmin = users[currentUser]?.isAdmin === true;
+        document.getElementById('casinoBalance').innerText = user.balance.toFixed(2);
+        const isAdmin = user.isAdmin === true;
         document.getElementById('adminPanel').style.display = isAdmin ? 'block' : 'none';
     }
 
-    function setUserBalance(username, newBalance) {
-        if (!users[username]) return false;
+    async function setUserBalance(username, newBalance) {
+        const data = await loadUsers();
+        if (!data || !data.users[username]) return false;
         if (newBalance < 0) newBalance = 0;
-        users[username].balance = newBalance;
-        saveUsers();
+        data.users[username].balance = newBalance;
+        await saveUsersFile(data.users, data.sha);
         if (currentUser === username) {
             document.getElementById('casinoBalance').innerText = newBalance.toFixed(2);
         }
         return true;
     }
 
-    function addToBalance(username, amount) {
-        if (!users[username]) return false;
-        let newBal = users[username].balance + amount;
+    async function addToBalance(username, amount) {
+        const data = await loadUsers();
+        if (!data || !data.users[username]) return false;
+        let newBal = data.users[username].balance + amount;
         if (newBal < 0) newBal = 0;
-        users[username].balance = newBal;
-        saveUsers();
+        data.users[username].balance = newBal;
+        await saveUsersFile(data.users, data.sha);
         if (currentUser === username) {
             document.getElementById('casinoBalance').innerText = newBal.toFixed(2);
         }
         return true;
     }
 
-    function createUser(username, password, balance = 100) {
-        if (users[username]) return false;
-        users[username] = { password, balance, isAdmin: false };
-        saveUsers();
+    async function createUser(username, password, balance = 100, isAdmin = false) {
+        const data = await loadUsers();
+        if (!data || data.users[username]) return false;
+        data.users[username] = { password, balance, isAdmin };
+        await saveUsersFile(data.users, data.sha);
         return true;
     }
 
@@ -238,9 +281,10 @@
         setTimeout(() => el.className = 'result', 2000);
     }
 
-    function playGame(gameName, bet, targetValue, resultDiv, onWinMsg, onLoseMsg) {
+    async function playGame(gameName, bet, targetValue, resultDiv) {
         if (!currentUser) { alert("Вы не авторизованы!"); return; }
-        const user = users[currentUser];
+        const data = await loadUsers();
+        const user = data?.users[currentUser];
         if (!user) { alert("Ошибка пользователя"); return; }
         if (user.balance < bet) { alert("❌ Недостаточно средств!"); return; }
 
@@ -276,7 +320,7 @@
 
         user.balance -= bet;
         if (isWin) user.balance += winAmount;
-        saveUsers();
+        await saveUsersFile(data.users, data.sha);
         document.getElementById('casinoBalance').innerText = user.balance.toFixed(2);
 
         if (isWin) {
@@ -287,57 +331,51 @@
     }
 
     // --- Обработчики ---
-    document.getElementById('doLogin').onclick = () => {
+    document.getElementById('doLogin').onclick = async () => {
         const login = document.getElementById('loginUsername').value.trim();
         const pass = document.getElementById('loginPassword').value.trim();
         if (!login || !pass) { showMessage('authMessage', 'Заполни поля', true); return; }
-        if (!users[login] || users[login].password !== pass) {
-            showMessage('authMessage', '❌ Неверный логин или пароль', true);
-            return;
-        }
-        currentUser = login;
-        updateUI();
+        await login(login, pass);
         document.getElementById('loginUsername').value = '';
         document.getElementById('loginPassword').value = '';
     };
     document.getElementById('logoutBtn').onclick = () => { currentUser = null; updateUI(); };
 
-    // Админ-панель
-    document.getElementById('adminSetBalance').onclick = () => {
+    document.getElementById('adminSetBalance').onclick = async () => {
         const target = document.getElementById('adminTargetUser').value.trim();
         const newBal = parseFloat(document.getElementById('adminNewBalance').value);
         if (!target || isNaN(newBal)) { showMessage('adminMsg', 'Введи логин и баланс', true); return; }
-        if (setUserBalance(target, newBal)) showMessage('adminMsg', `✅ ${target} → ${newBal} AMD`, false);
+        if (await setUserBalance(target, newBal)) showMessage('adminMsg', `✅ ${target} → ${newBal} AMD`, false);
         else showMessage('adminMsg', '❌ Игрок не найден', true);
     };
-    document.getElementById('adminAddBalance').onclick = () => {
+    document.getElementById('adminAddBalance').onclick = async () => {
         const target = document.getElementById('adminTargetUser').value.trim();
         const add = parseFloat(document.getElementById('adminNewBalance').value);
         if (!target || isNaN(add)) { showMessage('adminMsg', 'Введи логин и сумму', true); return; }
-        if (addToBalance(target, add)) showMessage('adminMsg', `✅ +${add} AMD для ${target}`, false);
+        if (await addToBalance(target, add)) showMessage('adminMsg', `✅ +${add} AMD для ${target}`, false);
         else showMessage('adminMsg', '❌ Игрок не найден', true);
     };
-    document.getElementById('adminSubtractBalance').onclick = () => {
+    document.getElementById('adminSubtractBalance').onclick = async () => {
         const target = document.getElementById('adminTargetUser').value.trim();
         const sub = parseFloat(document.getElementById('adminNewBalance').value);
         if (!target || isNaN(sub)) { showMessage('adminMsg', 'Введи логин и сумму', true); return; }
-        if (addToBalance(target, -sub)) showMessage('adminMsg', `✅ -${sub} AMD для ${target}`, false);
+        if (await addToBalance(target, -sub)) showMessage('adminMsg', `✅ -${sub} AMD для ${target}`, false);
         else showMessage('adminMsg', '❌ Игрок не найден', true);
     };
-    document.getElementById('adminCreateUser').onclick = () => {
+    document.getElementById('adminCreateUser').onclick = async () => {
         const newLogin = prompt("Логин нового игрока:");
         if (!newLogin) return;
-        if (users[newLogin]) {
+        const data = await loadUsers();
+        if (data?.users[newLogin]) {
             showMessage('adminMsg', '❌ Игрок с таким логином уже существует', true);
             return;
         }
         const newPass = prompt("Пароль для нового игрока:");
         if (!newPass) return;
-        createUser(newLogin, newPass, 100);
+        await createUser(newLogin, newPass, 100, false);
         showMessage('adminMsg', `✅ Игрок ${newLogin} создан! Баланс 100 AMD.`, false);
     };
 
-    // Игры
     document.getElementById('coinHeads').onclick = () => playGame('coin', parseFloat(document.getElementById('coinBet').value), 'Орёл', document.getElementById('coinResult'));
     document.getElementById('coinTails').onclick = () => playGame('coin', parseFloat(document.getElementById('coinBet').value), 'Решка', document.getElementById('coinResult'));
     document.getElementById('diceBtn').onclick = () => {
