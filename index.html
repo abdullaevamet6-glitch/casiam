@@ -162,25 +162,29 @@
 </div>
 
 <script>
-    // ===== НАСТРОЙКИ (ТВОЙ URL) =====
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzAMMBvvbMrdRetxZHPkmkN9h86srLmKJzdy90Aq4Hy_rHIueRpxRq0TWIerX_w4L0L/exec";
+    // ===== НАСТРОЙКИ =====
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbysksoB2bOKCIRQhdKIYVhlrWcQMH4QfuwOPcLKB9zKGBb4nU5Va6lHqLOjEiOek2P4/exec";
     let currentUser = null;
 
-    // Простая функция загрузки пользователей
     async function loadUsers() {
-        const response = await fetch(SCRIPT_URL + "?action=getUsers");
-        const data = await response.json();
-        if (data.success) return data.users;
-        return {};
+        try {
+            const response = await fetch(SCRIPT_URL + "?action=getUsers");
+            const data = await response.json();
+            if (data.success) return data.users;
+            return {};
+        } catch (e) {
+            console.error("Ошибка загрузки:", e);
+            return {};
+        }
     }
 
-    // Вход
     async function loginUser(login, password) {
         const users = await loadUsers();
         const user = users[login];
         if (user && user.password === password) {
             currentUser = login;
-            showGamePanel();
+            document.getElementById('authPanel').style.display = 'none';
+            document.getElementById('gamePanel').style.display = 'block';
             document.getElementById('currentUser').innerText = currentUser;
             document.getElementById('casinoBalance').innerText = user.balance.toFixed(2);
             const isAdmin = user.isAdmin === true;
@@ -192,18 +196,6 @@
         }
     }
 
-    function showGamePanel() {
-        document.getElementById('authPanel').style.display = 'none';
-        document.getElementById('gamePanel').style.display = 'block';
-    }
-
-    function showAuthPanel() {
-        document.getElementById('authPanel').style.display = 'block';
-        document.getElementById('gamePanel').style.display = 'none';
-        currentUser = null;
-    }
-
-    // Обновление баланса на экране
     async function refreshBalance() {
         if (!currentUser) return;
         const users = await loadUsers();
@@ -212,7 +204,6 @@
         }
     }
 
-    // Изменение баланса (админ)
     async function setUserBalance(login, balance) {
         await fetch(`${SCRIPT_URL}?action=setBalance&login=${encodeURIComponent(login)}&balance=${balance}`);
         if (currentUser === login) await refreshBalance();
@@ -233,7 +224,6 @@
         setTimeout(() => el.innerHTML = '', 3000);
     }
 
-    // Игры
     async function playGame(gameType, bet, guess, resultElement) {
         if (!currentUser) { alert("Вы не авторизованы!"); return; }
         const users = await loadUsers();
@@ -285,19 +275,18 @@
         setTimeout(() => resultElement.className = 'result', 2000);
     }
 
-    // --- Обработчики (простые, без ошибок) ---
+    // --- Обработчики ---
     document.getElementById('doLoginBtn').onclick = async () => {
         const login = document.getElementById('loginUsername').value.trim();
         const pass = document.getElementById('loginPassword').value.trim();
-        if (!login || !pass) {
-            document.getElementById('authMessage').innerHTML = 'Заполните поля';
-            return;
-        }
+        if (!login || !pass) { document.getElementById('authMessage').innerHTML = 'Заполните поля'; return; }
         await loginUser(login, pass);
     };
 
     document.getElementById('logoutBtn').onclick = () => {
-        showAuthPanel();
+        currentUser = null;
+        document.getElementById('authPanel').style.display = 'block';
+        document.getElementById('gamePanel').style.display = 'none';
     };
 
     document.getElementById('adminSetBalance').onclick = async () => {
@@ -351,8 +340,8 @@
     };
     document.getElementById('slotsBtn').onclick = () => playGame('slots', parseFloat(document.getElementById('slotsBet').value), null, document.getElementById('slotsResult'));
 
-    // Начальный показ
-    showAuthPanel();
+    document.getElementById('authPanel').style.display = 'block';
+    document.getElementById('gamePanel').style.display = 'none';
 </script>
 </body>
 </html>
