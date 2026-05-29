@@ -473,4 +473,111 @@
         const login = document.getElementById('regUsername').value.trim();
         const pass = document.getElementById('regPassword').value.trim();
         const bankarooLink = document.getElementById('regBankarooLink').value.trim();
-        if (!login || !
+        if (!login || !pass) { document.getElementById('regMessage').innerHTML = 'Заполните поля'; return; }
+        if (!bankarooLink) { document.getElementById('regMessage').innerHTML = 'Введите ссылку Bankaroo'; return; }
+        await registerUser(login, pass, bankarooLink);
+    };
+    
+    document.getElementById('showRegisterLink').onclick = () => {
+        document.getElementById('authPanel').style.display = 'none';
+        document.getElementById('registerPanel').style.display = 'block';
+    };
+    
+    document.getElementById('showAuthLink').onclick = () => {
+        document.getElementById('registerPanel').style.display = 'none';
+        document.getElementById('authPanel').style.display = 'block';
+    };
+    
+    document.getElementById('logoutBtn').onclick = () => {
+        currentUser = null;
+        document.getElementById('authPanel').style.display = 'block';
+        document.getElementById('gamePanel').style.display = 'none';
+    };
+    
+    document.getElementById('depositBtn').onclick = () => requestDeposit();
+    document.getElementById('withdrawBtn').onclick = () => requestWithdraw();
+    
+    document.getElementById('adminConfirmDepositBtn').onclick = async () => {
+        const target = document.getElementById('adminTargetUser').value.trim();
+        const amount = parseFloat(document.getElementById('adminNewBalance').value);
+        if (!target || isNaN(amount)) { showAdminMessage('Введите логин и сумму'); return; }
+        await confirmDeposit(target, amount);
+    };
+    
+    document.getElementById('adminSetBalance').onclick = async () => {
+        const target = document.getElementById('adminTargetUser').value.trim();
+        const bal = parseFloat(document.getElementById('adminNewBalance').value);
+        if (!target || isNaN(bal)) { showAdminMessage('Введите логин и баланс'); return; }
+        await setBalance(target, bal);
+        showAdminMessage(`✅ ${target} → ${bal} AMD`);
+        if (currentUser === target) await refreshBalance();
+    };
+    
+    document.getElementById('adminAddBalance').onclick = async () => {
+        const target = document.getElementById('adminTargetUser').value.trim();
+        const amt = parseFloat(document.getElementById('adminNewBalance').value);
+        if (!target || isNaN(amt)) { showAdminMessage('Введите логин и сумму'); return; }
+        await addBalance(target, amt);
+        showAdminMessage(`✅ +${amt} AMD для ${target}`);
+        if (currentUser === target) await refreshBalance();
+    };
+    
+    document.getElementById('adminSubtractBalance').onclick = async () => {
+        const target = document.getElementById('adminTargetUser').value.trim();
+        const amt = parseFloat(document.getElementById('adminNewBalance').value);
+        if (!target || isNaN(amt)) { showAdminMessage('Введите логин и сумму'); return; }
+        await addBalance(target, -amt);
+        showAdminMessage(`✅ -${amt} AMD для ${target}`);
+        if (currentUser === target) await refreshBalance();
+    };
+    
+    document.getElementById('adminCreateUserBtn').onclick = async () => {
+        const login = prompt("Логин нового игрока:");
+        if (!login) return;
+        const users = await loadUsers();
+        if (users[login]) { showAdminMessage('❌ Логин уже существует'); return; }
+        const pass = prompt("Пароль:");
+        if (!pass) return;
+        const bankarooLink = prompt("Ссылка Bankaroo:");
+        if (!bankarooLink) { showAdminMessage('❌ Нужна ссылка Bankaroo'); return; }
+        const check = await checkBankaroo(login, bankarooLink);
+        if (!check.success) { showAdminMessage('❌ ' + check.error); return; }
+        await createUser(login, pass, 0, false, check.code);
+        showAdminMessage(`✅ Игрок ${login} создан! (Bankaroo: ${check.name})`);
+    };
+    
+    document.getElementById('coinHeads').onclick = () => playGame('coin', parseFloat(document.getElementById('coinBet').value), 'Орёл', document.getElementById('coinResult'));
+    document.getElementById('coinTails').onclick = () => playGame('coin', parseFloat(document.getElementById('coinBet').value), 'Решка', document.getElementById('coinResult'));
+    
+    document.getElementById('diceBtn').onclick = () => {
+        const g = parseInt(document.getElementById('diceGuess').value);
+        if (isNaN(g) || g<1 || g>6) { alert("1-6"); return; }
+        playGame('dice', parseFloat(document.getElementById('diceBet').value), g, document.getElementById('diceResult'));
+        document.getElementById('diceGuess').value = '';
+    };
+    
+    document.getElementById('rouletteBtn').onclick = () => {
+        const g = parseInt(document.getElementById('rouletteGuess').value);
+        if (isNaN(g) || g<1 || g>10) { alert("1-10"); return; }
+        playGame('roulette', parseFloat(document.getElementById('rouletteBet').value), g, document.getElementById('rouletteResult'));
+        document.getElementById('rouletteGuess').value = '';
+    };
+    
+    document.getElementById('slotsBtn').onclick = () => playGame('slots', parseFloat(document.getElementById('slotsBet').value), 0, document.getElementById('slotsResult'));
+    
+    document.getElementById('dice2Btn').onclick = () => {
+        const g = parseInt(document.getElementById('dice2Guess').value);
+        if (isNaN(g) || g<2 || g>12) { alert("2-12"); return; }
+        playGame('dice2', parseFloat(document.getElementById('dice2Bet').value), g, document.getElementById('dice2Result'));
+        document.getElementById('dice2Guess').value = '';
+    };
+    
+    document.getElementById('bjHitBtn').onclick = () => blackjackHit();
+    document.getElementById('bjStandBtn').onclick = () => blackjackStand();
+
+    document.getElementById('authPanel').style.display = 'block';
+    document.getElementById('registerPanel').style.display = 'none';
+    document.getElementById('gamePanel').style.display = 'none';
+</script>
+</body>
+</html>
