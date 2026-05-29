@@ -3,10 +3,10 @@
     "password": "admin123",
     "balance": 10000,
     "isAdmin": true
-  }
-}
-"Morpex": {
+  },
+  "Morpex": {
     "password": "97531",
-    "balance": 0,
+    "balance": 1000,
     "isAdmin": false
+  }
 }
