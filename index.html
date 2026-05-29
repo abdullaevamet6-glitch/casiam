@@ -269,10 +269,12 @@
 
     function showToast(msg) { alert(msg); }
 
-    function requestDeposit() {
+        function requestDeposit() {
         const amount = prompt("Введите сумму ввода (AMD):");
         if (amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0) {
-            showToast(`✅ Заявка на ввод ${amount} AMD отправлена админу.`);
+            // Отправляем запрос в Google Apps Script
+            fetch(`${SCRIPT_URL}?action=depositRequest&login=${encodeURIComponent(currentUser)}&amount=${amount}`);
+            showToast(`✅ Заявка на ввод ${amount} AMD отправлена. Админ получит уведомление на почту.`);
         } else showToast("❌ Неверная сумма");
     }
 
