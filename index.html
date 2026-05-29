@@ -187,8 +187,9 @@
 </div>
 
 <script>
-    // ===== ТВОЙ URL (ОБНОВИ, КОГДА СКРИПТ ПЕРЕРАЗВЕРНЁШЬ) =====
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxQTJ3R199JApiY91wDxxvhoyRrz399ZnlMPFCWThRuhgRknJJhdQnPzwccKO1ncL1f/exec";
+    // ===== ТВОЙ URL СКРИПТА (ЗАМЕНИ НА СВОЙ!) =====
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbytUC5w4yBtvWKCko--RXDKSpEwCr6YAQhp0mbowbWCtrXd3yRdfE2W-iXAv9g-Yn0/exec";
+    
     let currentUser = null;
     let bjScore = 0, bjCards = [], bjBet = 0, bjInGame = false;
 
@@ -197,7 +198,10 @@
             const res = await fetch(SCRIPT_URL + "?action=getUsers");
             const data = await res.json();
             return data.success ? data.users : {};
-        } catch(e) { return {}; }
+        } catch(e) { 
+            console.error("loadUsers error:", e);
+            return {}; 
+        }
     }
 
     async function addBalance(login, amount) {
@@ -269,13 +273,12 @@
 
     function showToast(msg) { alert(msg); }
 
-    // ========== ИСПРАВЛЕННЫЕ ФУНКЦИИ ==========
     function requestDeposit() {
         const amount = prompt("Введите сумму ввода (AMD):");
         if (amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0) {
-            // Отправляем запрос в Google Apps Script
-            fetch(`${SCRIPT_URL}?action=depositRequest&login=${encodeURIComponent(currentUser)}&amount=${amount}`);
-            showToast(`✅ Заявка на ввод ${amount} AMD отправлена. Админ получит уведомление на почту.`);
+            fetch(`${SCRIPT_URL}?action=depositRequest&login=${encodeURIComponent(currentUser)}&amount=${amount}`)
+                .then(() => showToast(`✅ Заявка на ввод ${amount} AMD отправлена. Админ получит уведомление на почту.`))
+                .catch(err => showToast("❌ Ошибка: " + err));
         } else showToast("❌ Неверная сумма");
     }
 
@@ -286,7 +289,6 @@
         const required = user.deposited * 2;
         if (user.balance >= required) {
             if (confirm(`Вывести ${user.balance} AMD?`)) {
-                // Отправляем запрос в Google Apps Script
                 await fetch(`${SCRIPT_URL}?action=withdrawRequest&login=${encodeURIComponent(currentUser)}&amount=${user.balance}`);
                 await resetBalanceAndDeposited(currentUser);
                 await refreshBalance();
@@ -430,7 +432,7 @@
         setTimeout(()=>el.className='result',3000);
     }
 
-    // --- Обработчики ---
+    // Обработчики
     document.getElementById('doLoginBtn').onclick = async () => {
         const login = document.getElementById('loginUsername').value.trim();
         const pass = document.getElementById('loginPassword').value.trim();
@@ -516,15 +518,4 @@
     document.getElementById('dice2Btn').onclick = () => {
         const g = parseInt(document.getElementById('dice2Guess').value);
         if (isNaN(g) || g<2 || g>12) { alert("2-12"); return; }
-        playGame('dice2', parseFloat(document.getElementById('dice2Bet').value), g, document.getElementById('dice2Result'));
-        document.getElementById('dice2Guess').value = '';
-    };
-    document.getElementById('bjHitBtn').onclick = () => blackjackHit();
-    document.getElementById('bjStandBtn').onclick = () => blackjackStand();
-
-    document.getElementById('authPanel').style.display = 'block';
-    document.getElementById('registerPanel').style.display = 'none';
-    document.getElementById('gamePanel').style.display = 'none';
-</script>
-</body>
-</html>
+        playGame('dice2', parseFloat(document.getElementById('dice
