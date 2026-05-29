@@ -103,7 +103,7 @@
             <h3>🔐 ВХОД</h3>
             <input type="text" id="loginUsername" placeholder="Логин">
             <input type="password" id="loginPassword" placeholder="Пароль">
-            <button id="doLogin">Войти</button>
+            <button id="doLoginBtn">Войти</button>
         </div>
         <div id="authMessage" style="text-align:center; color:#f7931a;"></div>
     </div>
@@ -124,7 +124,7 @@
                 <button id="adminSetBalance">Установить</button>
                 <button id="adminAddBalance">➕ Добавить</button>
                 <button id="adminSubtractBalance">➖ Отнять</button>
-                <button id="adminCreateUser" class="create-user-btn">➕ Создать игрока</button>
+                <button id="adminCreateUserBtn" class="create-user-btn">➕ Создать игрока</button>
             </div>
             <div id="adminMsg" style="margin-top: 10px;"></div>
         </div>
@@ -162,7 +162,7 @@
 </div>
 
 <script>
-    // ===== НАСТРОЙКИ (репозиторий casiamd) =====
+    // ===== GitHub API НАСТРОЙКИ =====
     const GITHUB_TOKEN = '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';
     const REPO_OWNER = 'abdullaevamet6-glitch';
     const REPO_NAME = 'casiamd';
@@ -173,11 +173,11 @@
 
     async function fetchUsersFile() {
         const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
-        const res = await fetch(url, {
+        const response = await fetch(url, {
             headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' }
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
         const content = atob(data.content);
         return { users: JSON.parse(content), sha: data.sha };
     }
@@ -185,44 +185,47 @@
     async function saveUsersFile(users, sha) {
         const content = btoa(JSON.stringify(users, null, 2));
         const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
-        const res = await fetch(url, {
+        const response = await fetch(url, {
             method: 'PUT',
             headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: 'update users', content, sha, branch: BRANCH })
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
     }
 
-    async function loadUsers() {
+    async function loadUsersData() {
         try {
             const { users, sha } = await fetchUsersFile();
             return { users, sha };
         } catch (e) {
-            console.error('Ошибка загрузки:', e);
+            console.error('Ошибка загрузки пользователей:', e);
             return null;
         }
     }
 
-    async function login(username, password) {
-        const data = await loadUsers();
-        if (!data) { showMessage('authMessage', '❌ Ошибка загрузки данных', true); return false; }
+    async function performLogin(username, password) {
+        const data = await loadUsersData();
+        if (!data) {
+            showAuthMessage('❌ Ошибка загрузки данных', true);
+            return false;
+        }
         const user = data.users[username];
         if (!user || user.password !== password) {
-            showMessage('authMessage', '❌ Неверный логин или пароль', true);
+            showAuthMessage('❌ Неверный логин или пароль', true);
             return false;
         }
         currentUser = username;
-        updateUI();
+        await refreshGameUI();
         return true;
     }
 
-    async function updateUI() {
+    async function refreshGameUI() {
         if (!currentUser) {
             document.getElementById('authPanel').style.display = 'block';
             document.getElementById('gamePanel').style.display = 'none';
             return;
         }
-        const data = await loadUsers();
+        const data = await loadUsersData();
         if (!data) return;
         const user = data.users[currentUser];
         if (!user) return;
@@ -234,8 +237,8 @@
         document.getElementById('adminPanel').style.display = isAdmin ? 'block' : 'none';
     }
 
-    async function setUserBalance(username, newBalance) {
-        const data = await loadUsers();
+    async function updateUserBalance(username, newBalance) {
+        const data = await loadUsersData();
         if (!data || !data.users[username]) return false;
         if (newBalance < 0) newBalance = 0;
         data.users[username].balance = newBalance;
@@ -246,76 +249,84 @@
         return true;
     }
 
-    async function addToBalance(username, amount) {
-        const data = await loadUsers();
+    async function addUserBalance(username, amount) {
+        const data = await loadUsersData();
         if (!data || !data.users[username]) return false;
-        let newBal = data.users[username].balance + amount;
-        if (newBal < 0) newBal = 0;
-        data.users[username].balance = newBal;
+        let newBalance = data.users[username].balance + amount;
+        if (newBalance < 0) newBalance = 0;
+        data.users[username].balance = newBalance;
         await saveUsersFile(data.users, data.sha);
         if (currentUser === username) {
-            document.getElementById('casinoBalance').innerText = newBal.toFixed(2);
+            document.getElementById('casinoBalance').innerText = newBalance.toFixed(2);
         }
         return true;
     }
 
-    async function createUser(username, password, balance = 100, isAdmin = false) {
-        const data = await loadUsers();
+    async function createNewUser(username, password, balance = 100, isAdmin = false) {
+        const data = await loadUsersData();
         if (!data || data.users[username]) return false;
         data.users[username] = { password, balance, isAdmin };
         await saveUsersFile(data.users, data.sha);
         return true;
     }
 
-    function showMessage(elId, msg, isError) {
-        const el = document.getElementById(elId);
+    function showAuthMessage(msg, isError) {
+        const el = document.getElementById('authMessage');
         if (el) {
             el.innerHTML = msg;
-            setTimeout(() => { if (el) el.innerHTML = ''; }, 3000);
+            setTimeout(() => { el.innerHTML = ''; }, 3000);
         }
     }
 
-    function showResult(el, msg, isWin) {
-        el.innerHTML = msg;
-        el.className = `result ${isWin ? 'win' : 'lose'}`;
-        setTimeout(() => el.className = 'result', 2000);
+    function showAdminMessage(msg, isError) {
+        const el = document.getElementById('adminMsg');
+        if (el) {
+            el.innerHTML = msg;
+            setTimeout(() => { el.innerHTML = ''; }, 3000);
+        }
     }
 
-    async function playGame(gameName, bet, targetValue, resultDiv) {
+    function showGameResult(element, message, isWin) {
+        element.innerHTML = message;
+        element.className = `result ${isWin ? 'win' : 'lose'}`;
+        setTimeout(() => element.className = 'result', 2000);
+    }
+
+    async function playGame(gameType, bet, guess, resultElement) {
         if (!currentUser) { alert("Вы не авторизованы!"); return; }
-        const data = await loadUsers();
+        const data = await loadUsersData();
         const user = data?.users[currentUser];
         if (!user) { alert("Ошибка пользователя"); return; }
         if (user.balance < bet) { alert("❌ Недостаточно средств!"); return; }
 
         let isWin = false;
         let winAmount = 0;
-        let displayMsg = "";
+        let displayMessage = "";
 
-        if (gameName === 'coin') {
+        if (gameType === 'coin') {
             const result = Math.random() < 0.5 ? 'Орёл' : 'Решка';
-            isWin = result === targetValue;
+            isWin = result === guess;
             winAmount = isWin ? bet * 2 : 0;
-            displayMsg = result;
-        } else if (gameName === 'dice') {
+            displayMessage = result;
+        } else if (gameType === 'dice') {
             const roll = Math.floor(Math.random() * 6) + 1;
-            isWin = roll === targetValue;
+            isWin = roll === guess;
             winAmount = isWin ? bet * 5 : 0;
-            displayMsg = `Выпало ${roll}`;
-        } else if (gameName === 'roulette') {
+            displayMessage = `Выпало ${roll}`;
+        } else if (gameType === 'roulette') {
             const roll = Math.floor(Math.random() * 10) + 1;
-            isWin = roll === targetValue;
+            isWin = roll === guess;
             winAmount = isWin ? bet * 10 : 0;
-            displayMsg = `Выпало ${roll}`;
-        } else if (gameName === 'slots') {
-            const sym = ['🍒','🍋','🍊','🍉','⭐','💎','7️⃣'];
-            const a = sym[Math.floor(Math.random()*sym.length)];
-            const b = sym[Math.floor(Math.random()*sym.length)];
-            const c = sym[Math.floor(Math.random()*sym.length)];
+            displayMessage = `Выпало ${roll}`;
+        } else if (gameType === 'slots') {
+            const symbols = ['🍒','🍋','🍊','🍉','⭐','💎','7️⃣'];
+            const a = symbols[Math.floor(Math.random()*symbols.length)];
+            const b = symbols[Math.floor(Math.random()*symbols.length)];
+            const c = symbols[Math.floor(Math.random()*symbols.length)];
             document.getElementById('slotsDisplay').innerHTML = `${a} ${b} ${c}`;
             isWin = (a === b && b === c);
             winAmount = isWin ? bet * 7 : 0;
-            displayMsg = `${a} ${b} ${c}`;
+            displayMessage = `${a} ${b} ${c}`;
         }
 
         user.balance -= bet;
@@ -324,75 +335,91 @@
         document.getElementById('casinoBalance').innerText = user.balance.toFixed(2);
 
         if (isWin) {
-            showResult(resultDiv, `🎉 Выигрыш ${winAmount} AMD! ${displayMsg}`, true);
+            showGameResult(resultElement, `🎉 Выигрыш ${winAmount} AMD! ${displayMessage}`, true);
         } else {
-            showResult(resultDiv, `😞 Проигрыш ${bet} AMD. ${displayMsg}`, false);
+            showGameResult(resultElement, `😞 Проигрыш ${bet} AMD. ${displayMessage}`, false);
         }
     }
 
-    // --- Обработчики ---
-    document.getElementById('doLogin').onclick = async () => {
+    // --- Обработчики событий ---
+    document.getElementById('doLoginBtn').onclick = async () => {
         const login = document.getElementById('loginUsername').value.trim();
         const pass = document.getElementById('loginPassword').value.trim();
-        if (!login || !pass) { showMessage('authMessage', 'Заполни поля', true); return; }
-        await login(login, pass);
+        if (!login || !pass) { showAuthMessage('Заполните все поля', true); return; }
+        await performLogin(login, pass);
         document.getElementById('loginUsername').value = '';
         document.getElementById('loginPassword').value = '';
     };
-    document.getElementById('logoutBtn').onclick = () => { currentUser = null; updateUI(); };
+
+    document.getElementById('logoutBtn').onclick = () => {
+        currentUser = null;
+        refreshGameUI();
+    };
 
     document.getElementById('adminSetBalance').onclick = async () => {
         const target = document.getElementById('adminTargetUser').value.trim();
-        const newBal = parseFloat(document.getElementById('adminNewBalance').value);
-        if (!target || isNaN(newBal)) { showMessage('adminMsg', 'Введи логин и баланс', true); return; }
-        if (await setUserBalance(target, newBal)) showMessage('adminMsg', `✅ ${target} → ${newBal} AMD`, false);
-        else showMessage('adminMsg', '❌ Игрок не найден', true);
+        const newBalance = parseFloat(document.getElementById('adminNewBalance').value);
+        if (!target || isNaN(newBalance)) { showAdminMessage('Введите логин и баланс', true); return; }
+        if (await updateUserBalance(target, newBalance)) {
+            showAdminMessage(`✅ ${target} → ${newBalance} AMD`, false);
+        } else {
+            showAdminMessage('❌ Игрок не найден', true);
+        }
     };
+
     document.getElementById('adminAddBalance').onclick = async () => {
         const target = document.getElementById('adminTargetUser').value.trim();
-        const add = parseFloat(document.getElementById('adminNewBalance').value);
-        if (!target || isNaN(add)) { showMessage('adminMsg', 'Введи логин и сумму', true); return; }
-        if (await addToBalance(target, add)) showMessage('adminMsg', `✅ +${add} AMD для ${target}`, false);
-        else showMessage('adminMsg', '❌ Игрок не найден', true);
+        const amount = parseFloat(document.getElementById('adminNewBalance').value);
+        if (!target || isNaN(amount)) { showAdminMessage('Введите логин и сумму', true); return; }
+        if (await addUserBalance(target, amount)) {
+            showAdminMessage(`✅ +${amount} AMD для ${target}`, false);
+        } else {
+            showAdminMessage('❌ Игрок не найден', true);
+        }
     };
+
     document.getElementById('adminSubtractBalance').onclick = async () => {
         const target = document.getElementById('adminTargetUser').value.trim();
-        const sub = parseFloat(document.getElementById('adminNewBalance').value);
-        if (!target || isNaN(sub)) { showMessage('adminMsg', 'Введи логин и сумму', true); return; }
-        if (await addToBalance(target, -sub)) showMessage('adminMsg', `✅ -${sub} AMD для ${target}`, false);
-        else showMessage('adminMsg', '❌ Игрок не найден', true);
+        const amount = parseFloat(document.getElementById('adminNewBalance').value);
+        if (!target || isNaN(amount)) { showAdminMessage('Введите логин и сумму', true); return; }
+        if (await addUserBalance(target, -amount)) {
+            showAdminMessage(`✅ -${amount} AMD для ${target}`, false);
+        } else {
+            showAdminMessage('❌ Игрок не найден', true);
+        }
     };
-    document.getElementById('adminCreateUser').onclick = async () => {
+
+    document.getElementById('adminCreateUserBtn').onclick = async () => {
         const newLogin = prompt("Логин нового игрока:");
         if (!newLogin) return;
-        const data = await loadUsers();
+        const data = await loadUsersData();
         if (data?.users[newLogin]) {
-            showMessage('adminMsg', '❌ Игрок с таким логином уже существует', true);
+            showAdminMessage('❌ Такой логин уже существует', true);
             return;
         }
         const newPass = prompt("Пароль для нового игрока:");
         if (!newPass) return;
-        await createUser(newLogin, newPass, 100, false);
-        showMessage('adminMsg', `✅ Игрок ${newLogin} создан! Баланс 100 AMD.`, false);
+        await createNewUser(newLogin, newPass, 100, false);
+        showAdminMessage(`✅ Игрок ${newLogin} создан! Баланс 100 AMD.`, false);
     };
 
     document.getElementById('coinHeads').onclick = () => playGame('coin', parseFloat(document.getElementById('coinBet').value), 'Орёл', document.getElementById('coinResult'));
     document.getElementById('coinTails').onclick = () => playGame('coin', parseFloat(document.getElementById('coinBet').value), 'Решка', document.getElementById('coinResult'));
     document.getElementById('diceBtn').onclick = () => {
         const guess = parseInt(document.getElementById('diceGuess').value);
-        if (isNaN(guess) || guess<1 || guess>6) { alert("Число 1-6"); return; }
+        if (isNaN(guess) || guess < 1 || guess > 6) { alert("Число от 1 до 6"); return; }
         playGame('dice', parseFloat(document.getElementById('diceBet').value), guess, document.getElementById('diceResult'));
         document.getElementById('diceGuess').value = '';
     };
     document.getElementById('rouletteBtn').onclick = () => {
         const guess = parseInt(document.getElementById('rouletteGuess').value);
-        if (isNaN(guess) || guess<1 || guess>10) { alert("Число 1-10"); return; }
+        if (isNaN(guess) || guess < 1 || guess > 10) { alert("Число от 1 до 10"); return; }
         playGame('roulette', parseFloat(document.getElementById('rouletteBet').value), guess, document.getElementById('rouletteResult'));
         document.getElementById('rouletteGuess').value = '';
     };
     document.getElementById('slotsBtn').onclick = () => playGame('slots', parseFloat(document.getElementById('slotsBet').value), null, document.getElementById('slotsResult'));
 
-    updateUI();
+    refreshGameUI();
 </script>
 </body>
 </html>
