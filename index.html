@@ -162,62 +162,69 @@
 </div>
 
 <script>
-    // ===== НАСТРОЙКИ (ссылка на твой Google Apps Script) =====
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwFeFuwrwJqjsI3ttrh8g4p56yPXcl1vvWtARG2Yh2ZyETx5fJ-Gy6rGt5FMO0Npts2/exec";
+    // ===== НАСТРОЙКИ (ТВОЙ URL) =====
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzAMMBvvbMrdRetxZHPkmkN9h86srLmKJzdy90Aq4Hy_rHIueRpxRq0TWIerX_w4L0L/exec";
     let currentUser = null;
 
-    async function fetchUsers() {
-        const response = await fetch(`${SCRIPT_URL}?action=getUsers`);
+    // Простая функция загрузки пользователей
+    async function loadUsers() {
+        const response = await fetch(SCRIPT_URL + "?action=getUsers");
         const data = await response.json();
         if (data.success) return data.users;
-        throw new Error(data.error);
+        return {};
     }
 
-    async function setUserBalance(login, balance) {
-        const response = await fetch(`${SCRIPT_URL}?action=setBalance&login=${encodeURIComponent(login)}&balance=${balance}`);
-        const data = await response.json();
-        return data.success;
-    }
-
-    async function addUserBalance(login, amount) {
-        const response = await fetch(`${SCRIPT_URL}?action=addBalance&login=${encodeURIComponent(login)}&amount=${amount}`);
-        const data = await response.json();
-        return data.success;
-    }
-
-    async function createUser(login, password, balance, isAdmin) {
-        const response = await fetch(`${SCRIPT_URL}?action=createUser&login=${encodeURIComponent(login)}&password=${encodeURIComponent(password)}&balance=${balance}&isAdmin=${isAdmin}`);
-        const data = await response.json();
-        return data.success;
-    }
-
-    async function refreshUI() {
-        if (!currentUser) {
-            document.getElementById('authPanel').style.display = 'block';
-            document.getElementById('gamePanel').style.display = 'none';
-            return;
-        }
-        const users = await fetchUsers();
-        const user = users[currentUser];
-        if (!user) return;
-        document.getElementById('authPanel').style.display = 'none';
-        document.getElementById('gamePanel').style.display = 'block';
-        document.getElementById('currentUser').innerText = currentUser;
-        document.getElementById('casinoBalance').innerText = user.balance.toFixed(2);
-        const isAdmin = user.isAdmin === true;
-        document.getElementById('adminPanel').style.display = isAdmin ? 'block' : 'none';
-    }
-
-    async function performLogin(username, password) {
-        const users = await fetchUsers();
-        const user = users[username];
-        if (!user || user.password !== password) {
+    // Вход
+    async function loginUser(login, password) {
+        const users = await loadUsers();
+        const user = users[login];
+        if (user && user.password === password) {
+            currentUser = login;
+            showGamePanel();
+            document.getElementById('currentUser').innerText = currentUser;
+            document.getElementById('casinoBalance').innerText = user.balance.toFixed(2);
+            const isAdmin = user.isAdmin === true;
+            document.getElementById('adminPanel').style.display = isAdmin ? 'block' : 'none';
+            return true;
+        } else {
             document.getElementById('authMessage').innerHTML = '❌ Неверный логин или пароль';
             return false;
         }
-        currentUser = username;
-        await refreshUI();
-        return true;
+    }
+
+    function showGamePanel() {
+        document.getElementById('authPanel').style.display = 'none';
+        document.getElementById('gamePanel').style.display = 'block';
+    }
+
+    function showAuthPanel() {
+        document.getElementById('authPanel').style.display = 'block';
+        document.getElementById('gamePanel').style.display = 'none';
+        currentUser = null;
+    }
+
+    // Обновление баланса на экране
+    async function refreshBalance() {
+        if (!currentUser) return;
+        const users = await loadUsers();
+        if (users[currentUser]) {
+            document.getElementById('casinoBalance').innerText = users[currentUser].balance.toFixed(2);
+        }
+    }
+
+    // Изменение баланса (админ)
+    async function setUserBalance(login, balance) {
+        await fetch(`${SCRIPT_URL}?action=setBalance&login=${encodeURIComponent(login)}&balance=${balance}`);
+        if (currentUser === login) await refreshBalance();
+    }
+
+    async function addUserBalance(login, amount) {
+        await fetch(`${SCRIPT_URL}?action=addBalance&login=${encodeURIComponent(login)}&amount=${amount}`);
+        if (currentUser === login) await refreshBalance();
+    }
+
+    async function createUser(login, password, balance, isAdmin) {
+        await fetch(`${SCRIPT_URL}?action=createUser&login=${encodeURIComponent(login)}&password=${encodeURIComponent(password)}&balance=${balance}&isAdmin=${isAdmin}`);
     }
 
     function showAdminMessage(msg) {
@@ -226,9 +233,10 @@
         setTimeout(() => el.innerHTML = '', 3000);
     }
 
+    // Игры
     async function playGame(gameType, bet, guess, resultElement) {
         if (!currentUser) { alert("Вы не авторизованы!"); return; }
-        const users = await fetchUsers();
+        const users = await loadUsers();
         const user = users[currentUser];
         if (!user) return;
         if (user.balance < bet) { alert("❌ Недостаточно средств!"); return; }
@@ -265,8 +273,7 @@
 
         await addUserBalance(currentUser, -bet);
         if (isWin) await addUserBalance(currentUser, winAmount);
-        const newUsers = await fetchUsers();
-        document.getElementById('casinoBalance').innerText = newUsers[currentUser].balance.toFixed(2);
+        await refreshBalance();
 
         if (isWin) {
             resultElement.innerHTML = `🎉 Выигрыш ${winAmount} AMD! ${displayMsg}`;
@@ -278,19 +285,19 @@
         setTimeout(() => resultElement.className = 'result', 2000);
     }
 
-    // --- Обработчики ---
+    // --- Обработчики (простые, без ошибок) ---
     document.getElementById('doLoginBtn').onclick = async () => {
         const login = document.getElementById('loginUsername').value.trim();
         const pass = document.getElementById('loginPassword').value.trim();
-        if (!login || !pass) { document.getElementById('authMessage').innerHTML = 'Заполните поля'; return; }
-        await performLogin(login, pass);
-        document.getElementById('loginUsername').value = '';
-        document.getElementById('loginPassword').value = '';
+        if (!login || !pass) {
+            document.getElementById('authMessage').innerHTML = 'Заполните поля';
+            return;
+        }
+        await loginUser(login, pass);
     };
 
     document.getElementById('logoutBtn').onclick = () => {
-        currentUser = null;
-        refreshUI();
+        showAuthPanel();
     };
 
     document.getElementById('adminSetBalance').onclick = async () => {
@@ -320,7 +327,7 @@
     document.getElementById('adminCreateUserBtn').onclick = async () => {
         const newLogin = prompt("Логин нового игрока:");
         if (!newLogin) return;
-        const users = await fetchUsers();
+        const users = await loadUsers();
         if (users[newLogin]) { showAdminMessage('❌ Логин уже существует'); return; }
         const newPass = prompt("Пароль:");
         if (!newPass) return;
@@ -344,7 +351,8 @@
     };
     document.getElementById('slotsBtn').onclick = () => playGame('slots', parseFloat(document.getElementById('slotsBet').value), null, document.getElementById('slotsResult'));
 
-    refreshUI();
+    // Начальный показ
+    showAuthPanel();
 </script>
 </body>
 </html>
