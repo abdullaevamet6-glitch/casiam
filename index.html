@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BITAMD CASINO</title>
+    <title>BITAMD CASINO + BANKAROO</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -19,7 +19,7 @@
             background: rgba(30,30,40,0.95);
             border-radius: 24px;
             padding: 20px;
-            width: 280px;
+            width: 320px;
             margin: 20px auto;
             border: 1px solid #f7931a;
         }
@@ -84,6 +84,9 @@
         .logout-btn { background: #555; margin-top: 10px; }
         .cashier-btn { background: #2c7a4d; margin: 5px; }
         .switch-link { text-align: center; margin-top: 10px; font-size: 12px; cursor: pointer; color: #f7931a; }
+        .bankaroo-field { margin-top: 10px; }
+        .bankaroo-field input { width: 100%; }
+        small { font-size: 10px; color: #aaa; }
         @media (max-width: 700px) {
             .balance-card .balance { font-size: 36px; }
             .games-grid { grid-template-columns: 1fr; }
@@ -95,7 +98,7 @@
     <div id="authPanel">
         <div class="auth-card">
             <h3>🔐 ВХОД</h3>
-            <input type="text" id="loginUsername" placeholder="Логин">
+            <input type="text" id="loginUsername" placeholder="Логин (Имя)">
             <input type="password" id="loginPassword" placeholder="Пароль">
             <button id="doLoginBtn">Войти</button>
             <div class="switch-link" id="showRegisterLink">Нет аккаунта? Зарегистрироваться</div>
@@ -106,8 +109,12 @@
     <div id="registerPanel" style="display:none;">
         <div class="register-card">
             <h3>📝 РЕГИСТРАЦИЯ</h3>
-            <input type="text" id="regUsername" placeholder="Логин">
+            <input type="text" id="regUsername" placeholder="Логин (Имя)">
             <input type="password" id="regPassword" placeholder="Пароль">
+            <div class="bankaroo-field">
+                <input type="text" id="regBankarooLink" placeholder="Ссылка Bankaroo (https://bnkr.me/618xxx)">
+                <small>Вставь ссылку из карточки Bankaroo</small>
+            </div>
             <button id="doRegisterBtn">Зарегистрироваться</button>
             <div class="switch-link" id="showAuthLink">Уже есть аккаунт? Войти</div>
         </div>
@@ -187,26 +194,20 @@
 </div>
 
 <script>
-    // ===== НОВАЯ ССЫЛКА =====
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6x6xsEH3QpFc20X57TSJ4G3byR61e8BtYv1ncUdA3BF1fXCtqb20GVkRLNdbLPaN0/exec";
     
     let currentUser = null;
     let bjScore = 0, bjCards = [], bjBet = 0, bjInGame = false;
 
-    // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
-    function showToast(msg) { 
-        alert(msg); 
-    }
+    function showToast(msg) { alert(msg); }
 
     async function loadUsers() {
         try {
-            const url = `${SCRIPT_URL}?action=getUsers`;
-            const res = await fetch(url);
+            const res = await fetch(SCRIPT_URL + "?action=getUsers");
             const data = await res.json();
-            if (data.success) return data.users;
-            return {};
+            return data.success ? data.users : {};
         } catch(e) { 
-            console.error("loadUsers error:", e);
+            console.error(e);
             return {}; 
         }
     }
@@ -227,8 +228,14 @@
         await fetch(`${SCRIPT_URL}?action=setBalance&login=${encodeURIComponent(login)}&balance=${amount}`);
     }
 
-    async function createUser(login, password, balance, isAdmin) {
-        await fetch(`${SCRIPT_URL}?action=createUser&login=${encodeURIComponent(login)}&password=${encodeURIComponent(password)}&balance=${balance}&isAdmin=${isAdmin}`);
+    async function createUser(login, password, balance, isAdmin, bankarooCode) {
+        await fetch(`${SCRIPT_URL}?action=createUser&login=${encodeURIComponent(login)}&password=${encodeURIComponent(password)}&balance=${balance}&isAdmin=${isAdmin}&bankarooCode=${encodeURIComponent(bankarooCode)}`);
+    }
+
+    async function checkBankaroo(login, link) {
+        const res = await fetch(`${SCRIPT_URL}?action=checkBankaroo&login=${encodeURIComponent(login)}&bankarooLink=${encodeURIComponent(link)}`);
+        const data = await res.json();
+        return data;
     }
 
     async function refreshBalance() {
@@ -239,7 +246,6 @@
         }
     }
 
-    // ===== АВТОРИЗАЦИЯ =====
     async function loginUser(login, password) {
         const users = await loadUsers();
         const user = users[login];
@@ -258,14 +264,22 @@
         }
     }
 
-    async function registerUser(login, password) {
+    async function registerUser(login, password, bankarooLink) {
         const users = await loadUsers();
         if (users[login]) {
             document.getElementById('regMessage').innerHTML = '❌ Логин уже существует';
             return false;
         }
-        await createUser(login, password, 0, false);
-        document.getElementById('regMessage').innerHTML = '✅ Регистрация успешна! Теперь войдите.';
+        
+        // Проверяем Bankaroo ссылку
+        const check = await checkBankaroo(login, bankarooLink);
+        if (!check.success) {
+            document.getElementById('regMessage').innerHTML = '❌ ' + check.error;
+            return false;
+        }
+        
+        await createUser(login, password, 0, false, check.code);
+        document.getElementById('regMessage').innerHTML = `✅ Регистрация успешна! Добро пожаловать, ${check.name}!`;
         setTimeout(() => {
             document.getElementById('registerPanel').style.display = 'none';
             document.getElementById('authPanel').style.display = 'block';
@@ -273,12 +287,11 @@
         return true;
     }
 
-    // ===== ЗАЯВКИ С ПИСЬМАМИ =====
     function requestDeposit() {
         const amount = prompt("Введите сумму ввода (AMD):");
         if (amount && !isNaN(parseFloat(amount)) && parseFloat(amount) > 0) {
             fetch(`${SCRIPT_URL}?action=depositRequest&login=${encodeURIComponent(currentUser)}&amount=${amount}`)
-                .then(() => showToast(`✅ Заявка на ввод ${amount} AMD отправлена. Админ получит уведомление на почту.`))
+                .then(() => showToast(`✅ Заявка на ввод ${amount} AMD отправлена.`))
                 .catch(err => showToast("❌ Ошибка: " + err));
         } else showToast("❌ Неверная сумма");
     }
@@ -293,14 +306,13 @@
                 await fetch(`${SCRIPT_URL}?action=withdrawRequest&login=${encodeURIComponent(currentUser)}&amount=${user.balance}`);
                 await resetBalanceAndDeposited(currentUser);
                 await refreshBalance();
-                showToast(`✅ Заявка на вывод отправлена. Админ получит уведомление на почту. Баланс обнулён.`);
+                showToast(`✅ Заявка на вывод отправлена. Баланс обнулён.`);
             }
         } else {
             showToast(`❌ Нужно минимум ${required} AMD. У вас ${user.balance}.`);
         }
     }
 
-    // ===== АДМИН =====
     function showAdminMessage(msg) {
         const el = document.getElementById('adminMsg');
         el.innerHTML = msg;
@@ -314,7 +326,7 @@
         if (currentUser === login) await refreshBalance();
     }
 
-    // ===== ИГРЫ =====
+    // ИГРЫ (такие же как были)
     async function playGame(gameType, bet, guess, resultElement) {
         if (!currentUser) return alert("Не авторизован");
         const users = await loadUsers();
@@ -365,7 +377,7 @@
         setTimeout(() => resultElement.className = 'result', 2000);
     }
 
-    // ===== БЛЭКДЖЕК =====
+    // Блэкджек
     async function blackjackHit() {
         if (!bjInGame) {
             const bet = parseFloat(document.getElementById('blackjackBet').value);
@@ -449,7 +461,7 @@
         setTimeout(()=>el.className='result',3000);
     }
 
-    // ===== НАЗНАЧЕНИЕ ОБРАБОТЧИКОВ (ВСЕ КНОПКИ) =====
+    // Обработчики кнопок
     document.getElementById('doLoginBtn').onclick = async () => {
         const login = document.getElementById('loginUsername').value.trim();
         const pass = document.getElementById('loginPassword').value.trim();
@@ -460,107 +472,5 @@
     document.getElementById('doRegisterBtn').onclick = async () => {
         const login = document.getElementById('regUsername').value.trim();
         const pass = document.getElementById('regPassword').value.trim();
-        if (!login || !pass) { document.getElementById('regMessage').innerHTML = 'Заполните поля'; return; }
-        await registerUser(login, pass);
-    };
-    
-    document.getElementById('showRegisterLink').onclick = () => {
-        document.getElementById('authPanel').style.display = 'none';
-        document.getElementById('registerPanel').style.display = 'block';
-    };
-    
-    document.getElementById('showAuthLink').onclick = () => {
-        document.getElementById('registerPanel').style.display = 'none';
-        document.getElementById('authPanel').style.display = 'block';
-    };
-    
-    document.getElementById('logoutBtn').onclick = () => {
-        currentUser = null;
-        document.getElementById('authPanel').style.display = 'block';
-        document.getElementById('gamePanel').style.display = 'none';
-    };
-    
-    document.getElementById('depositBtn').onclick = () => requestDeposit();
-    document.getElementById('withdrawBtn').onclick = () => requestWithdraw();
-    
-    document.getElementById('adminConfirmDepositBtn').onclick = async () => {
-        const target = document.getElementById('adminTargetUser').value.trim();
-        const amount = parseFloat(document.getElementById('adminNewBalance').value);
-        if (!target || isNaN(amount)) { showAdminMessage('Введите логин и сумму'); return; }
-        await confirmDeposit(target, amount);
-    };
-    
-    document.getElementById('adminSetBalance').onclick = async () => {
-        const target = document.getElementById('adminTargetUser').value.trim();
-        const bal = parseFloat(document.getElementById('adminNewBalance').value);
-        if (!target || isNaN(bal)) { showAdminMessage('Введите логин и баланс'); return; }
-        await setBalance(target, bal);
-        showAdminMessage(`✅ ${target} → ${bal} AMD`);
-        if (currentUser === target) await refreshBalance();
-    };
-    
-    document.getElementById('adminAddBalance').onclick = async () => {
-        const target = document.getElementById('adminTargetUser').value.trim();
-        const amt = parseFloat(document.getElementById('adminNewBalance').value);
-        if (!target || isNaN(amt)) { showAdminMessage('Введите логин и сумму'); return; }
-        await addBalance(target, amt);
-        showAdminMessage(`✅ +${amt} AMD для ${target}`);
-        if (currentUser === target) await refreshBalance();
-    };
-    
-    document.getElementById('adminSubtractBalance').onclick = async () => {
-        const target = document.getElementById('adminTargetUser').value.trim();
-        const amt = parseFloat(document.getElementById('adminNewBalance').value);
-        if (!target || isNaN(amt)) { showAdminMessage('Введите логин и сумму'); return; }
-        await addBalance(target, -amt);
-        showAdminMessage(`✅ -${amt} AMD для ${target}`);
-        if (currentUser === target) await refreshBalance();
-    };
-    
-    document.getElementById('adminCreateUserBtn').onclick = async () => {
-        const login = prompt("Логин нового игрока:");
-        if (!login) return;
-        const users = await loadUsers();
-        if (users[login]) { showAdminMessage('❌ Логин уже существует'); return; }
-        const pass = prompt("Пароль:");
-        if (!pass) return;
-        await createUser(login, pass, 0, false);
-        showAdminMessage(`✅ Игрок ${login} создан! Баланс 0 AMD.`);
-    };
-    
-    document.getElementById('coinHeads').onclick = () => playGame('coin', parseFloat(document.getElementById('coinBet').value), 'Орёл', document.getElementById('coinResult'));
-    document.getElementById('coinTails').onclick = () => playGame('coin', parseFloat(document.getElementById('coinBet').value), 'Решка', document.getElementById('coinResult'));
-    
-    document.getElementById('diceBtn').onclick = () => {
-        const g = parseInt(document.getElementById('diceGuess').value);
-        if (isNaN(g) || g<1 || g>6) { alert("1-6"); return; }
-        playGame('dice', parseFloat(document.getElementById('diceBet').value), g, document.getElementById('diceResult'));
-        document.getElementById('diceGuess').value = '';
-    };
-    
-    document.getElementById('rouletteBtn').onclick = () => {
-        const g = parseInt(document.getElementById('rouletteGuess').value);
-        if (isNaN(g) || g<1 || g>10) { alert("1-10"); return; }
-        playGame('roulette', parseFloat(document.getElementById('rouletteBet').value), g, document.getElementById('rouletteResult'));
-        document.getElementById('rouletteGuess').value = '';
-    };
-    
-    document.getElementById('slotsBtn').onclick = () => playGame('slots', parseFloat(document.getElementById('slotsBet').value), 0, document.getElementById('slotsResult'));
-    
-    document.getElementById('dice2Btn').onclick = () => {
-        const g = parseInt(document.getElementById('dice2Guess').value);
-        if (isNaN(g) || g<2 || g>12) { alert("2-12"); return; }
-        playGame('dice2', parseFloat(document.getElementById('dice2Bet').value), g, document.getElementById('dice2Result'));
-        document.getElementById('dice2Guess').value = '';
-    };
-    
-    document.getElementById('bjHitBtn').onclick = () => blackjackHit();
-    document.getElementById('bjStandBtn').onclick = () => blackjackStand();
-
-    // Показываем панель входа
-    document.getElementById('authPanel').style.display = 'block';
-    document.getElementById('registerPanel').style.display = 'none';
-    document.getElementById('gamePanel').style.display = 'none';
-</script>
-</body>
-</html>
+        const bankarooLink = document.getElementById('regBankarooLink').value.trim();
+        if (!login || !
