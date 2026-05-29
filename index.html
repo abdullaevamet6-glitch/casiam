@@ -283,9 +283,10 @@
         const required = user.deposited * 2;
         if (user.balance >= required) {
             if (confirm(`Вывести ${user.balance} AMD?`)) {
+                await fetch(`${SCRIPT_URL}?action=withdrawRequest&login=${encodeURIComponent(currentUser)}&amount=${user.balance}`);
                 await resetBalanceAndDeposited(currentUser);
                 await refreshBalance();
-                showToast(`✅ Выведено. Баланс обнулён.`);
+                showToast(`✅ Заявка на вывод отправлена. Баланс обнулён.`);
             }
         } else {
             showToast(`❌ Нужно минимум ${required} AMD. У вас ${user.balance}.`);
@@ -472,7 +473,7 @@
         const amt = parseFloat(document.getElementById('adminNewBalance').value);
         if (!target || isNaN(amt)) { showAdminMessage('Введите логин и сумму'); return; }
         await addBalance(target, amt);
-        showAdminMessage(`✅ +${amt} AMD dla ${target}`);
+        showAdminMessage(`✅ +${amt} AMD для ${target}`);
         if (currentUser === target) await refreshBalance();
     };
     document.getElementById('adminSubtractBalance').onclick = async () => {
@@ -480,7 +481,7 @@
         const amt = parseFloat(document.getElementById('adminNewBalance').value);
         if (!target || isNaN(amt)) { showAdminMessage('Введите логин и сумму'); return; }
         await addBalance(target, -amt);
-        showAdminMessage(`✅ -${amt} AMD dla ${target}`);
+        showAdminMessage(`✅ -${amt} AMD для ${target}`);
         if (currentUser === target) await refreshBalance();
     };
     document.getElementById('adminCreateUserBtn').onclick = async () => {
